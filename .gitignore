@@ -1,0 +1,33 @@
+# Temporary or system files
+*.swp
+*~
+*.log
+__pycache__/
+.DS_Store
+
+# Virtual environment directories (e.g., virtualenv, conda)
+venv/
+env/
+*.pyc
+
+# IDE or system-specific configuration files
+.vscode/
+.idea/
+
+# Data files
+data/
+*.csv
+*.xlsx
+
+# Trained model files
+models/
+
+# Files generated during training
+*.h5
+*.ckpt
+
+# Jupyter notebook output folders
+.ipynb_checkpoints/
+
+# Cache files
+.cache/
