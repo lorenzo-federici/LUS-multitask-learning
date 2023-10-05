@@ -7,3 +7,5 @@ torchvision == 0.15.2
 pickle-mixin == 1.0.2
 PyQt6 == 6.5.2
 matplotlib
+tensorflow
+albumentations==0.4.6

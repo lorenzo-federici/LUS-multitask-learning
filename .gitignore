@@ -31,3 +31,6 @@ models/
 
 # Cache files
 .cache/
+
+# Backup
+old/

@@ -57,10 +57,11 @@ class HDF5Dataset(Dataset):
 
 # Custom replica class of the dataset to train the neural network (return -> [frame,target])
 class FrameTargetDataset(Dataset):
-    def __init__(self, hdf5_dataset):
+    def __init__(self, hdf5_dataset, transform = None):
         self.hdf5_dataset = hdf5_dataset
         #self.resize_size = (100, 150)
         self.resize_size = (224, 224)
+        self.transform = transform
 
     def __len__(self):
         return len(self.hdf5_dataset)
@@ -68,15 +69,18 @@ class FrameTargetDataset(Dataset):
     def __getitem__(self, index):
         _, frame_data, mask_data, target_data, _, _ = self.hdf5_dataset[index]
 
-        # Apply Resize transformation
-        frame_tensor = transforms.ToTensor()(frame_data)
-        frame_tensor = transforms.Resize(self.resize_size, antialias=True)(frame_tensor)
-        frame_tensor = frame_tensor.permute(1, 2, 0) # Move channels to the last dimension (needed after resize)
+        if self.transform is not None:
+            frame_tensor, mask_tensor = self.transform(frame_data, mask_data)
 
-        # Apply Resize transformation
-        mask_tensor = transforms.ToTensor()(mask_data)
-        mask_tensor = transforms.Resize(self.resize_size, antialias=True)(mask_tensor)
-        mask_tensor = mask_tensor.permute(1, 2, 0) # Move channels to the last dimension (needed after resize)
+        # # Apply Resize transformation
+        # frame_tensor = transforms.ToTensor()(frame_data)
+        # frame_tensor = transforms.Resize(self.resize_size, antialias=True)(frame_tensor)
+        # frame_tensor = frame_tensor.permute(1, 2, 0) # Move channels to the last dimension (needed after resize)
+
+        # # Apply Resize transformation
+        # mask_tensor = transforms.ToTensor()(mask_data)
+        # mask_tensor = transforms.Resize(self.resize_size, antialias=True)(mask_tensor)
+        # mask_tensor = mask_tensor.permute(1, 2, 0) # Move channels to the last dimension (needed after resize)
 
 
         return frame_tensor, mask_tensor
