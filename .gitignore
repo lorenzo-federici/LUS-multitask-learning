@@ -33,4 +33,4 @@ models/
 .cache/
 
 # Backup
-old/
+backup/

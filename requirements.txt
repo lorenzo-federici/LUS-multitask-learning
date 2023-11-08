@@ -1,11 +1,20 @@
-h5py == 3.9.0
-numpy == 1.26.0
-tqdm == 4.66.1
-torch == 2.0.1
-napari == 0.4.18
-torchvision == 0.15.2
-pickle-mixin == 1.0.2
-PyQt6 == 6.5.2
+h5py
+numpy
+tqdm
+pickle-mixin
 matplotlib
+medpy
+
 tensorflow
-albumentations==0.4.6
+tensorflow-macos
+tensorflow-metal 
+
+keras
+seaborn
+scikit-learn
+
+albumentations
+
+keras_cv
+
+visualkeras
