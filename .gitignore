@@ -4,6 +4,7 @@
 *.log
 __pycache__/
 .DS_Store
+exp/data/
 
 # Virtual environment directories (e.g., virtualenv, conda)
 venv/
@@ -20,7 +21,7 @@ data/
 *.xlsx
 
 # Trained model files
-models/
+# models/
 
 # Files generated during training
 *.h5

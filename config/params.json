@@ -1,27 +1,27 @@
 {
     "SETTING": {
-        "BASE_PATH": "/Users/lorenzofederici/Univpm/Tesi/multitask-learning",
         "IMG_SHAPE": 224,
         "N_CLASS": 4,
         "SEED": 42
     },
     "EXPS": [
         [
-            {"backbone": "UNet", "task": "segmentation", "out_class": 1, "batch_size": 4, "epoch": 20, "split_ratio": [0.6, 0.2, 0.2], "optimizer": "Adam", "lr": 0.0001, "augmentation": true},
-            {"backbone": "VGG16", "task": "segmentation", "out_class": 1, "batch_size": 4, "epoch": 20, "split_ratio": [0.6, 0.2, 0.2], "optimizer": "Adam", "lr": 0.0001, "augmentation": true},
-            {"backbone": "ResNet", "task": "segmentation", "out_class": 1, "batch_size": 4, "epoch": 20, "split_ratio": [0.6, 0.2, 0.2], "optimizer": "Adam", "lr": 0.0001, "augmentation": true}
+            {"backbone": "ResNet", "task": "classification", "out_class": 4, "batch_size": 16, "epoch": 1, "split_ratio": [0.6, 0.2, 0.2], "optimizer": "SGD", "lr": 0.01, "augmentation": true},
+            {"backbone": "ResNet", "task": "classification", "out_class": 4, "batch_size": 16, "epoch": 2, "split_ratio": [0.6, 0.2, 0.2], "optimizer": "Adam", "lr": 0.0001, "augmentation": true}
+            
         ],
         [
-            {"backbone": "ResNet", "task": "multitask", "out_class": 1, "batch_size": 4, "epoch": 50, "split_ratio": [0.6, 0.2, 0.2], "optimizer": "Adam", "lr": 0.001, "augmentation": true}
+            {"backbone": "ResNet", "task": "classification", "out_class": 4, "batch_size": 16, "epoch": 1, "split_ratio": [0.6, 0.2, 0.2], "optimizer": "Adam", "lr": 0.0001, "augmentation": true, "weights": "imagenet", "layer_to_freeze": "enc_2"}
         ],
         [
-            {"backbone": "UNet", "task": "segmentation", "out_class": 1, "batch_size": 4, "epoch": 2, "split_ratio": [0.6, 0.2, 0.2], "optimizer": "Adam", "lr": 0.0001, "augmentation": false}
+            {"backbone": "ResNet", "task": "segmentation", "out_class": 1, "batch_size": 8, "epoch": 25, "split_ratio": [0.6, 0.2, 0.2], "optimizer": "Adam", "lr": 0.0001, "augmentation": false}
         ],
         [
-            {"backbone": "ResNet", "task": "segmentation", "out_class": 1, "batch_size": 4, "epoch": 2, "split_ratio": [0.6, 0.2, 0.2], "optimizer": "Adam", "lr": 0.0001, "augmentation": false}
+            {"backbone": "ResNet", "task": "multitask", "out_class": 1, "batch_size": 8, "epoch": 25, "split_ratio": [0.6, 0.2, 0.2], "optimizer": "Adam", "lr": 0.0001, "augmentation": false}
         ],
+        
         [
-            {"backbone": "VGG16", "task": "segmentation", "out_class": 1, "batch_size": 4, "epoch": 2, "split_ratio": [0.6, 0.2, 0.2], "optimizer": "Adam", "lr": 0.0001, "augmentation": false}
+            {"backbone": "VGG16", "task": "segmentation", "out_class": 1, "batch_size": 8, "epoch": 2, "split_ratio": [0.6, 0.2, 0.2], "optimizer": "Adam", "lr": 0.0001, "augmentation": false}
         ]
     ]
 }

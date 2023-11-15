@@ -2,7 +2,7 @@ import tensorflow as tf
 from tensorflow.keras import backend as K
 from keras.losses import categorical_crossentropy
 
-from src.utils.metrics import *
+from utils.metrics import *
 
 
 # Segmentation -----------------------------------------------------------------------------------
