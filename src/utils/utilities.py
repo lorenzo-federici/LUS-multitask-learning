@@ -64,6 +64,9 @@ def plot_frames_split(ds_info, save_path, log_scale=False, output_mode=(False,Tr
     # display the plot
     if show_plot:
         plt.show()
+    
+    plt.clf()
+    plt.close()
 
 
 def plot_patients_split(ds_info, save_path, output_mode=(False,True)):
@@ -102,6 +105,9 @@ def plot_patients_split(ds_info, save_path, output_mode=(False,True)):
     if show_plot:
         plt.show()
 
+    plt.clf()
+    plt.close()
+
 def plot_labels_distr(y_train_ds, y_val_ds, y_test_ds, save_path, output_mode=(False,True)):
     # calculate the class count for each set
     class_counts_val = np.bincount(y_val_ds)
@@ -135,6 +141,9 @@ def plot_labels_distr(y_train_ds, y_val_ds, y_test_ds, save_path, output_mode=(F
     # display the plot
     if show_plot:
         plt.show()
+    
+    plt.clf()
+    plt.close()
 
 def display(display_list):
     """Function printing imgs"""
@@ -164,25 +173,7 @@ def display(display_list):
         plt.imshow(display_list[2], cmap='jet', alpha=0.2)
         plt.axis('off')
 
-def print_split_diagnostic_info(ds_info):
-    # Print diagnostic information
-    for medical_center in ds_info['medical_center_patients'].keys():
-        print(f"Medical Center: {medical_center}")
-        print(f"  Frames in center: {ds_info['frames_by_center'][medical_center]}")
-        print(f"  Train patients:")
-        for patient in ds_info['train_patients_by_center'][medical_center]:
-            frame_count = ds_info['frames_by_center_patient'][medical_center][patient]
-            print(f"   {patient}: {frame_count} frames")
-        print(f"  Val patients:")
-        for patient in ds_info['val_patients_by_center'][medical_center]:
-            frame_count = ds_info['frames_by_center_patient'][medical_center][patient]
-            print(f"   {patient}: {frame_count} frames")
-        print(f"  Test patients:")
-        for patient in ds_info['test_patients_by_center'][medical_center]:
-            frame_count = ds_info['frames_by_center_patient'][medical_center][patient]
-            print(f"   {patient}: {frame_count} frames")
-
-def plot_split_graphs(train_subset, val_subset, test_subset, ds_info):
+def plot_split_graphs(ds_info):
     # Plot the distribution of frames per center
     frame_counts = ds_info['frames_by_center']
     centers = list(frame_counts.keys())
@@ -219,7 +210,9 @@ def plot_split_graphs(train_subset, val_subset, test_subset, ds_info):
     plt.yscale('log')
     plt.xticks([i + width for i in x], centers, rotation=45, fontsize=8)
     plt.legend()
-    plt.show()    
+    plt.show()
+    plt.clf()
+    plt.close()    
 
 def make_gradcam_heatmap(img_array, model, last_conv_layer_name, pred_index=None):
     '''Display heatmap of prediction'''
@@ -415,9 +408,10 @@ def display_testing_images_multi_hm(data_path, model, epoch = None):
     plt.show()
     plt.close()
 
-def plot_fdistr_per_class_pie(y_train_ds, y_val_ds, y_test_ds, save_path, output_mode=(False, True)):
+def plot_fdistr_per_class_pie(y_train_ds, y_val_ds, y_test_ds, save_path = None, output_mode=(False, True)):
     sets = ['Train', 'Validation', 'Test']
     datasets = [y_train_ds, y_val_ds, y_test_ds]
+    colors = ['#ffd7f4','#d896bb', '#b15680', '#880044']
 
     fig, axes = plt.subplots(1, 3, figsize=(15, 5))
 
@@ -425,20 +419,32 @@ def plot_fdistr_per_class_pie(y_train_ds, y_val_ds, y_test_ds, save_path, output
         class_counts = np.bincount(datasets[i])
         labels = np.arange(len(class_counts)).astype(int)
 
-        wedges, _, _ = axes[i].pie(class_counts, labels=labels, autopct='%1.1f%%', startangle=90)
-        axes[i].set_title(f'{set_name} Set')
+        # Ordina le etichette e le frequenze in base alle frequenze decrescenti
+        sorted_indices = np.argsort(class_counts)[::-1]
+        class_counts = class_counts[sorted_indices]
+        labels = labels[sorted_indices]
 
-     # Creazione di una legenda unica per tutta la figura
+        # Impostazione di alcuni valori di explode per staccare le fette
+        explode = [0.05 if count > 0 else 0 for count in class_counts]
+
+        # Utilizza i colori personalizzati
+        wedges, _, _ = axes[i].pie(class_counts, labels=labels, autopct=lambda p: '{:.0f}\n({:.1f}%)'.format(p * sum(class_counts) / 100, p), startangle=90, explode=explode, colors=colors)
+        axes[i].set_title(f'{set_name} Set')  # Imposta il grassetto per il titolo
+
+
+    # Creazione di una legenda unica per tutta la figura
     legend_labels = [f'Class {label}' for label in labels]
     fig.legend(wedges, legend_labels, title='Classes', loc='lower center', ncol=len(set_name))
 
     plt.suptitle('Frames distribution in sets for each class', y=1.05)
-    #plt.subplots_adjust(bottom=0.3)
     
     show_plot, save = output_mode
     if save:
         plt.savefig(save_path)
 
-    # display the plot
+    # Visualizza il grafico
     if show_plot:
         plt.show()
+
+    plt.clf()
+    plt.close()

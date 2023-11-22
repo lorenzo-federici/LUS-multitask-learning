@@ -18,3 +18,5 @@ albumentations
 keras_cv
 
 visualkeras
+
+keras-tuner

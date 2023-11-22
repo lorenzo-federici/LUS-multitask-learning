@@ -1,11 +1,14 @@
 
 import os
+import sys
 import keras
 import numpy as np
-import matplotlib.pyplot as plt
+import pandas as pd
 from keras import backend as K
+import matplotlib.pyplot as plt
+import seaborn as sns
+from sklearn.metrics import confusion_matrix
 from sklearn.utils.class_weight import compute_class_weight
-from keras.optimizers.legacy import Adam, SGD
 
 from utils.loss import *
 from utils.metrics import *
@@ -16,6 +19,8 @@ from models.network import Network
 from utils.utilities import *
 
 from datetime import datetime, date
+from keras.optimizers.legacy import Adam, SGD
+from tensorflow.keras.saving import load_model
 
 class Experiment:
     def __init__(self, base_path, output_mode = (False, True)):
@@ -50,7 +55,6 @@ class Experiment:
         )
 
     def build_experiment(self, setting, exp_config):
-        os.environ['TF_CPP_MIN_LOG_LEVEL'] = '1'
         self.seed, self.n_class, self.img_shape = (
             setting['SEED'],
             setting['N_CLASS'],
@@ -59,9 +63,10 @@ class Experiment:
         self.exp_config = exp_config
 
         self.get_exp_name()
-        self.exp_path = self.base_path + '/exp/data/' + self.name
+        self.exp_path = self.base_path + '/exp/' + self.name
         if not os.path.exists(self.exp_path):
             os.makedirs(self.exp_path)
+            os.makedirs(self.exp_path + '/fig')
         self.load_dataset()
 
     def get_exp_name(self):
@@ -223,8 +228,9 @@ class Experiment:
 
         callbacks = CustomCallbacks(self.exp_path, self.exp_config['backbone'], task).get_list_callbacks()
 
+        print('\n')
         print("-"*60)
-        print('\t\t   ~~~~~~ RUNNING ~~~~~~')
+        print('\t\t   ~~~~~~ TRAINING ~~~~~')
         print("-"*60)
 
         # steps
@@ -247,7 +253,7 @@ class Experiment:
                 validation_data  = self.val_ds,
                 class_weight     = self.class_weight_dicts[0],
                 validation_steps = val_steps,
-                # callbacks        = callbacks,
+                callbacks        = callbacks,
                 workers = 8
             )
         else:
@@ -261,6 +267,81 @@ class Experiment:
 
         return history
     
+    def evaluation_model(self, model):
+        model_path = f"{self.exp_path}/checkpoint/"
+
+        if os.path.exists(model_path):
+            # model = load_model(model_path, compile=False)
+            print("Loading best weights")
+            model.load_weights(model_path)
+        
+        model = self.compile_model(model)
+
+        batch_size = self.exp_config['batch_size']
+        test_samples = len(self.test_subset_idxs)
+        test_steps = test_samples // batch_size
+        if test_samples % batch_size != 0:
+            test_steps += 1
+
+        print('\n')
+        print("-"*60)
+        print('\t\t   ~~~~~ EVALUATION ~~~~')
+        print("-"*60)
+
+        # EVALUATION
+        evaluate = model.evaluate(
+            self.test_ds,
+            batch_size=batch_size,
+            # sample_weight=self.class_weight_dicts[2],
+            steps=test_steps,
+            workers=1,
+            use_multiprocessing=False,
+            return_dict=True
+        )
+
+        df = pd.DataFrame([evaluate])
+        df.to_csv(f'{self.exp_path}/eval_results.csv', index=False)
+        
+        print('\n')
+        print("-"*60)
+        print('\t\t   ~~~~~ PREDICTION ~~~~')
+        print("-"*60)
+
+        # PREDICT & CONFUSION_MTRX
+        test_prediction = model.predict(
+            self.test_ds,
+            batch_size=self.exp_config['batch_size'],
+            steps=test_steps,
+            callbacks=None,
+            workers=1,
+            use_multiprocessing=False
+        )
+
+        score_test = self.y_test_ds
+        pred_score = tf.argmax(test_prediction, axis=-1)
+        cf_matrix_test = confusion_matrix(score_test, pred_score, normalize='true', labels=[list(range(self.n_class))])
+
+        ax = sns.heatmap(cf_matrix_test, linewidths=1, annot=True, fmt='.2f', cmap="BuPu")
+        ax.set_ylabel('Actual')
+        ax.set_xlabel('Predicted')
+        ax.set_title('Test Set Confusion Matrix')
+
+        display, save = self.output_mode
+
+        if save:
+            save_path = self.exp_path
+            train_graphs_path = os.path.join(save_path, f"confusion_matrix.png")
+            plt.savefig(train_graphs_path)
+
+        # Show the figure
+        if display:
+            plt.show()
+        
+        plt.clf()
+        plt.close()
+
+        return evaluate
+    
     # Plot function -----------------------------------------------------------------------------
     def generate_split_charts(self, charts=None):
         if self.ds_infos is not None:
@@ -271,11 +352,14 @@ class Experiment:
             display_mode = self.output_mode
 
             # choose the right save path (global of per-experiment)
-            save_path = self.exp_path
-
-            chart_file_path = os.path.join(save_path, "split_pie_per_class.png")
-            plot_fdistr_per_class_pie(self.y_train_ds, self.y_val_ds, self.y_test_ds, chart_file_path,output_mode=display_mode)
-                
+            save_path = self.exp_path + "/fig/"
+            print(save_path)
+   
+            if "pierclass" in charts:
+                chart_file_path = os.path.join(save_path, "split_pie_per_class.png")
+                print(chart_file_path)
+                plot_fdistr_per_class_pie(self.y_train_ds, self.y_val_ds, self.y_test_ds, chart_file_path,output_mode=display_mode)
+             
             if "splitinfo" in charts:
                 print_split_ds_info(self.ds_infos)
             
@@ -324,13 +408,16 @@ class Experiment:
             display, save = self.output_mode
 
             if save:
-                save_path = self.exp_path
+                save_path = self.exp_path + "/fig/"
                 train_graphs_path = os.path.join(save_path, f"train_graphs{keys[0]}.png")
                 plt.savefig(train_graphs_path)
 
             # Show the figure
             if display:
                 plt.show()
+            
+            plt.clf()
+            plt.close()
 
         # Get the loss and metrics from history
         history_keys = history.history.keys()
@@ -339,20 +426,17 @@ class Experiment:
         _plot_histo(history, loss_key)
 
         if self.exp_config['task'] == 'multitask':
-            metrics_keys_seg = [key for key in history_keys if((key not in loss_key) and ('mask' in key) and ('val' not in key))]
-            metrics_keys_cls = [key for key in history_keys if((key not in loss_key) and ('cls' in key) and ('val' not in key))]
+            metrics_keys_seg = [key for key in history_keys if((key not in loss_key) and ('mask' in key) and ('val' not in key) and ('lr' not in key))]
+            metrics_keys_cls = [key for key in history_keys if((key not in loss_key) and ('cls' in key) and ('val' not in key) and ('lr' not in key))]
             if len(metrics_keys_seg) > 0:
                 _plot_histo(history, metrics_keys_seg)
             if len(metrics_keys_cls) > 0:
                 _plot_histo(history, metrics_keys_cls)
         elif self.exp_config['task'] == 'classification':
-            metrics_keys_seg = [key for key in history_keys if((key not in loss_key) and ('val' not in key))]
+            metrics_keys_seg = [key for key in history_keys if((key not in loss_key) and ('val' not in key) and ('lr' not in key))]
             _plot_histo(history, metrics_keys_seg)
         elif self.exp_config['task'] == 'segmentation':
             _plot_histo(history, ['accuracy'])
 
         if 'lr' in history_keys:
             _plot_histo(history, ['lr'])
-
-        
-        plt.close()

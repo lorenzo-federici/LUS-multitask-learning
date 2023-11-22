@@ -5,7 +5,8 @@ from keras.applications.vgg16 import VGG16
 from tensorflow.keras.models import Model
 from tensorflow.keras.layers import Input, Conv2D, MaxPooling2D, UpSampling2D, Concatenate, BatchNormalization, Activation, Add, GlobalAveragePooling2D, Dense, Flatten, Dropout
 
-from models.resnet18 import resnet18
+# from models.resnet18 import resnet18
+from models.resnet import ResNet
 
 class Network:
     def __init__(self, exp_config, num_classes_seg:int = 1, num_classes_cls:int = 4, input_size:int = 224):
@@ -17,9 +18,11 @@ class Network:
 
         self.task     = exp_config.get('task', None)
         self.backbone = exp_config.get('backbone', None)
-        self.dropout  = exp_config.get('dropout', None)
+        self.type     = exp_config.get('type', None)
+        self.dropout  = exp_config.get('dropout', .0)
         self.weights  = exp_config.get('weights', None)
         self.layer_to_freeze = exp_config.get('layer_to_freeze', None)
+        self.dil_rate = exp_config.get('dil_rate', 1)
         
         self.model_name = self.get_model_name()
 
@@ -27,9 +30,12 @@ class Network:
         '''Create model name'''
         backbone_mapping = {
             'VGG16': 'VGG16_UNet',
-            'ResNet': 'ResUNet'
+            f'ResNet_{self.type}': 'ResUNet'
         }
-        name = backbone_mapping.get(self.backbone, self.backbone)
+        if self.task == 'classification': 
+            name = self.backbone + f'_{self.type}'
+        else:
+            name = backbone_mapping.get(self.backbone, self.backbone) + "_" + self.task
         return name
     
     def build_model(self):
@@ -44,8 +50,9 @@ class Network:
         aug = self.exp_config["augmentation"]
         print(f'\tBatch size --> {bs}')
         print(f'\tOptimizer --> {opt} lr:{lr}')
-        print(f'\tBatch size --> {epoch}')
+        print(f'\tEpoch --> {epoch}')
         print(f'\tModel --> {aug}')
+        print(f'\tDropout --> {self.dropout}')
 
         if not self.weights == None:
             print('\tTrasfer learning Active from IMAGENET')
@@ -60,7 +67,7 @@ class Network:
         elif self.task == 'segmentation':
             model = self.segmentation_model()
         elif self.task == 'classification':
-            model = resnet18(self.input_size, weights=self.weights, layer_to_freeze=self.layer_to_freeze, num_class=self.n_class_cls)
+            model = ResNet(self.input_size, model = self.type, weights=self.weights, layer_to_freeze=self.layer_to_freeze, num_class=self.n_class_cls, dropout=self.dropout, dil_rate = self.dil_rate)()        
         
         return model
     

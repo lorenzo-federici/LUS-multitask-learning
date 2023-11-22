@@ -7,7 +7,7 @@ from keras.utils import get_file
 
 WEIGHTS_PATH_NO_TOP = 'https://github.com/qubvel/classification_models/releases/download/0.0.1/resnet18_imagenet_1000_no_top.h5'
 
-def resnet18(input_shape= (224,224,3), weights=None, layer_to_freeze=None, num_class=4):
+def resnet18(input_shape= (224,224,3), weights=None, layer_to_freeze=None, num_class=4, dropout=.0):
     def _resnet_block(x, filters: int, kernel_size=3, name='', init_scheme='he_normal', down_sample=False):
         strides = [2, 1] if down_sample else [1, 1]
         res = x
@@ -17,7 +17,8 @@ def resnet18(input_shape= (224,224,3), weights=None, layer_to_freeze=None, num_c
         x = BatchNormalization()(x)
         x = Activation('relu')(x)
         x = Conv2D(filters, strides=strides[1], kernel_size=kernel_size, 
-                                padding='same', kernel_initializer=init_scheme)(x)
+                                padding='same', kernel_initializer=init_scheme,
+                                dilation_rate=2)(x)
         x = BatchNormalization()(x)
         
         if down_sample:
@@ -47,6 +48,11 @@ def resnet18(input_shape= (224,224,3), weights=None, layer_to_freeze=None, num_c
     x = _resnet_block(x, 256, name='enc_3')
     x = _resnet_block(x, 512, name='enc_4.0', down_sample=True)
     x = _resnet_block(x, 512, name='enc_4')
+
+    if dropout > .0:
+        x = Dropout(rate=dropout)(x)
+
+    # x = attention_block(x)
 
     if not weights == 'imagenet':
         x = _classification_head(x, num_class, name='')
@@ -78,3 +84,20 @@ def _fine_tuning(model, stop_layer_name):
         layer.trainable = False
         if layer.name == stop_layer_name:
             break
+
+def attention_block(x):
+    # Attention network
+    # a_map = Conv2D(1024, 1, strides=(1, 1), padding="same", activation='relu')(conv_base.output)
+    # a_map = Conv2D(512, 1, strides=(1, 1), padding="same", activation='relu')(x)
+    a_map = Conv2D(128, 1, strides=(1, 1), padding="same", activation='relu')(x)
+    
+    #a_map = Conv2D(64, 1, strides=(1, 1), padding="same", activation='relu')(a_map)
+    a_map = Conv2D(1, 1, strides=(1, 1), padding="same", activation='relu')(a_map)
+    
+    #a_map = Conv2D(1024, 1, strides=(1, 1), padding="same", activation='relu')(a_map)
+    # a_map = Conv2D(2048, 1, strides=(1, 1), padding="same", activation='sigmoid')(a_map)
+    a_map = Conv2D(512, 1, strides=(1, 1), padding="same", activation='sigmoid')(a_map)
+    res = Multiply()([x, a_map])
+    return res
+
+
