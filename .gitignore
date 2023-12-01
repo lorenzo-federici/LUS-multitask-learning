@@ -16,7 +16,8 @@ env/
 .idea/
 
 # Data files
-data/
+data/*
+!data/data_preprocessing/
 *.csv
 *.xlsx
 *.png
