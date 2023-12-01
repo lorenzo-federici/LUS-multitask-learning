@@ -19,6 +19,8 @@ env/
 data/
 *.csv
 *.xlsx
+*.png
+*.pkl
 
 # Trained model files
 # models/

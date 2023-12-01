@@ -151,13 +151,14 @@ class TFDataset():
         dataset = tf.data.Dataset.from_tensor_slices(self.indexes)
     
         if self.is_train:
-            dataset = dataset.shuffle(buffer_size=1000, reshuffle_each_iteration=True)
+            dataset = dataset.shuffle(buffer_size=2154, reshuffle_each_iteration=True)
         
         dataset = dataset.map(lambda index: tf.py_function(func=self._map, inp=[index], Tout=(tf.float32, tf.int32)),
                                 num_parallel_calls=tf.data.AUTOTUNE)
         dataset = dataset.map(lambda f, t: tf.py_function(func=self._process_data, inp=[f, t], Tout=(tf.float32, tf.int32)),
                                 num_parallel_calls=tf.data.AUTOTUNE)
         
+        # dataset = dataset.cache()
         dataset = dataset.batch(self.batch_size)
         dataset = dataset.repeat()
         dataset = dataset.prefetch(buffer_size=tf.data.AUTOTUNE)

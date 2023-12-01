@@ -1,9 +1,12 @@
 
 import os
 import sys
+import csv
 import keras
 import numpy as np
 import pandas as pd
+from pathlib import Path
+
 from keras import backend as K
 import matplotlib.pyplot as plt
 import seaborn as sns
@@ -20,13 +23,16 @@ from utils.utilities import *
 
 from datetime import datetime, date
 from keras.optimizers.legacy import Adam, SGD
-from tensorflow.keras.saving import load_model
+# from tensorflow.keras.saving import load_model
 
 class Experiment:
-    def __init__(self, base_path, output_mode = (False, True)):
+    def __init__(self, base_path, exp_name, force_split = False, output_mode = (False, True)):
         self.name = None
         self.output_mode = output_mode # (verbose,save)
         self.base_path = base_path
+        self.exp_name  = exp_name
+        self.exp_path  = None
+        self.force_split = force_split
 
         self.seed, self.n_class, self.img_shape = (
             None,
@@ -34,7 +40,6 @@ class Experiment:
             None,
         )
         self.exp_config = None
-        self.exp_path   = None
         self.dataset, self.ds_infos, self.train_ds, self.val_ds, self.test_ds, self.class_weight_dicts = (
             None,
             None,
@@ -63,30 +68,47 @@ class Experiment:
         self.exp_config = exp_config
 
         self.get_exp_name()
-        self.exp_path = self.base_path + '/exp/' + self.name
-        if not os.path.exists(self.exp_path):
-            os.makedirs(self.exp_path)
-            os.makedirs(self.exp_path + '/fig')
+
+        # self.exp_path = os.path.join(self.exp_path, self.name)
+        self.exp_path = os.path.join(self.base_path, 'exp', self.exp_name, self.name)
+        if os.path.exists(self.exp_path):
+            dir_exp = os.path.join(self.base_path, 'exp', self.exp_name)
+            n_exp = sum(1 for dir in os.listdir(dir_exp) if dir.startswith(self.name) and os.path.isdir(os.path.join(dir_exp, dir))) + 1
+            self.exp_path = self.exp_path + f'_{n_exp}'
+        
+        os.makedirs(self.exp_path + '/fig')
+
+        with open(self.exp_path + '/model_config.csv', mode='w', newline='') as file_csv:
+            writer = csv.writer(file_csv)
+            writer.writerow(self.exp_config.keys())
+            writer.writerow(self.exp_config.values())
+        
         self.load_dataset()
 
     def get_exp_name(self):
         if 'name' in self.exp_config:
-            name = self.exp_config['name']
+            self.name = self.exp_config['name']
         else:
-            name = "exp_{}_{}_BS{}_EP{}_OPT{}_LR{}_AUG{}".format(
-                self.exp_config['task'],
-                self.exp_config['backbone'],
+            weights  = self.exp_config.get('weights', None)
+            model_name = "{}_{}_{}".format(
+                    self.exp_config['task'],
+                    self.exp_config['backbone'],
+                    self.exp_config.get('type', '18')
+                )
+            if weights is not None:
+                model_name = model_name + "_" + weights
+                
+            self.name = "exp_{}_BS{}_EP{}_OPT{}_LR{}_AUG{}_DO{}_DIL{}".format(
+                model_name,
                 self.exp_config['batch_size'],
                 self.exp_config['epoch'],
                 self.exp_config['optimizer'],
                 self.exp_config['lr'],
                 self.exp_config['augmentation'],
+                self.exp_config.get('dropout', .0),
+                self.exp_config.get('dil_rate', 1)
                 )
-        today     = date.today().strftime("%d/%m/%Y").split('/')
-        time      = datetime.now().strftime("%d/%m/%Y %H:%M:%S")[-8:].split(":")
-        date_name = f"{today[0]}{today[1]}_{time[0]}{time[1]}"
-
-        self.name = f"{name}__DT{date_name}"
+            
         print('\n')
         print("-"*90)
         print(f">> EXPERIMENT: {self.name} <<")
@@ -143,15 +165,35 @@ class Experiment:
             self.base_path, 'data/iclus', 'hospitals-patients-dict.pkl'
         )
 
-        _data_split_strategy = split_strategy(
-            self.dataset,
-            ratios=split_ratios,
-            pkl_file=pkl_centersdict_path,
-            rseed=self.seed,
-        )
-        
-        if self.train_subset_idxs == None:
+        split_path = os.path.join(self.base_path, "exp/split_index.pkl")
+
+        if not os.path.exists(split_path) and self.train_subset_idxs == None or self.force_split:
+            _data_split_strategy = split_strategy(
+                self.dataset,
+                ratios=split_ratios,
+                pkl_file=pkl_centersdict_path,
+                rseed=self.seed,
+            )
+
             self.train_subset_idxs, self.val_subset_idxs, self.test_subset_idxs, self.ds_infos = _data_split_strategy
+            split_dict = {
+                "train": self.train_subset_idxs,
+                "val": self.val_subset_idxs,
+                "test": self.test_subset_idxs,
+                "info": self.ds_infos
+            }
+
+            with open(split_path, "wb") as file:
+                pickle.dump(split_dict, file)
+        else:
+            with open(split_path, "rb") as file:
+                split_dict = pickle.load(file)
+                self.train_subset_idxs, self.val_subset_idxs, self.test_subset_idxs, self.ds_infos = (
+                    split_dict["train"],
+                    split_dict["val"],
+                    split_dict["test"],
+                    split_dict["info"]
+                )
         
         self.train_ds = TFDataset(self.dataset, self.train_subset_idxs, batch_size, task, is_train=augmentation).as_iterator()
         self.val_ds   = TFDataset(self.dataset, self.val_subset_idxs, batch_size, task, is_train=False).as_iterator()
@@ -268,7 +310,7 @@ class Experiment:
         return history
     
     def evaluation_model(self, model):
-        model_path = f"{self.exp_path}/checkpoint/"
+        model_path = f"{self.exp_path}/checkpoint/best.h5"
 
         if os.path.exists(model_path):
             # model = load_model(model_path, compile=False)
@@ -329,8 +371,7 @@ class Experiment:
         display, save = self.output_mode
 
         if save:
-            save_path = self.exp_path
-            train_graphs_path = os.path.join(save_path, f"confusion_matrix.png")
+            train_graphs_path = os.path.join(self.exp_path, 'fig' , "confusion_matrix.png")
             plt.savefig(train_graphs_path)
 
         # Show the figure
@@ -346,33 +387,27 @@ class Experiment:
     def generate_split_charts(self, charts=None):
         if self.ds_infos is not None:
             if charts is None:
-                charts = ["fdistr", "pdistr", "ldistr"]
+                charts = ["piesetsrclass", "piesrclass", "pdistr", "ldistr"]
             
             # get the output mode
             display_mode = self.output_mode
 
-            # choose the right save path (global of per-experiment)
-            save_path = self.exp_path + "/fig/"
-            print(save_path)
+            save_path = Path(self.exp_path).parent.parent
    
-            if "pierclass" in charts:
-                chart_file_path = os.path.join(save_path, "split_pie_per_class.png")
-                print(chart_file_path)
-                plot_fdistr_per_class_pie(self.y_train_ds, self.y_val_ds, self.y_test_ds, chart_file_path,output_mode=display_mode)
-             
-            if "splitinfo" in charts:
-                print_split_ds_info(self.ds_infos)
+            if "piesetsrclass" in charts:
+                chart_file_path = os.path.join(save_path, "split_pie_per_sets_class.png")
+                plot_fdistr_per_sets_class_pie(self.y_train_ds, self.y_val_ds, self.y_test_ds, chart_file_path,output_mode=display_mode)
             
-            if "fdistr" in charts:
-                chart_file_path = os.path.join(save_path, "split_per_frames.png")
-                plot_frames_split(self.ds_infos, chart_file_path, log_scale=True, output_mode=display_mode)
+            if "piesrclass" in charts:
+                chart_file_path = os.path.join(save_path, "split_pie_per_class.png")
+                plot_fdistr_per_class_pie(self.ds_infos['labels'], chart_file_path,output_mode=display_mode)
 
             if "pdistr" in charts:
                 chart_file_path = os.path.join(save_path, "split_per_patients.png")
                 plot_patients_split(self.ds_infos, chart_file_path, output_mode=display_mode)
 
             if "ldistr" in charts:
-                chart_file_path = os.path.join(save_path, "distr_labels_per_set.png")
+                chart_file_path = os.path.join(save_path, "split_distr_labels_per_set.png")
                 plot_labels_distr(self.y_train_ds, self.y_val_ds, self.y_test_ds, chart_file_path, output_mode=display_mode)
         else:
             raise Exception('dataset not yet splitted.')

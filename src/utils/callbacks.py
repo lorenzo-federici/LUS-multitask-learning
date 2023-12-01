@@ -36,7 +36,7 @@ class CustomCallbacks:
         #                                save_best_only=True)
         
         checkpointer = ModelCheckpoint(
-                            filepath=f"{self.model_path}/checkpoint/",
+                            filepath=f"{self.model_path}/checkpoint/best.h5",
                             save_weights_only=True,
                             monitor='val_loss',
                             mode='min', 

@@ -20,3 +20,6 @@ keras_cv
 visualkeras
 
 keras-tuner
+
+imblearn
+openpyxl

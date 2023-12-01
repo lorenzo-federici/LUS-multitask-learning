@@ -18,7 +18,7 @@ class Network:
 
         self.task     = exp_config.get('task', None)
         self.backbone = exp_config.get('backbone', None)
-        self.type     = exp_config.get('type', None)
+        self.type     = exp_config.get('type', '18')
         self.dropout  = exp_config.get('dropout', .0)
         self.weights  = exp_config.get('weights', None)
         self.layer_to_freeze = exp_config.get('layer_to_freeze', None)
@@ -32,7 +32,7 @@ class Network:
             'VGG16': 'VGG16_UNet',
             f'ResNet_{self.type}': 'ResUNet'
         }
-        if self.task == 'classification': 
+        if self.task == 'classification':
             name = self.backbone + f'_{self.type}'
         else:
             name = backbone_mapping.get(self.backbone, self.backbone) + "_" + self.task
