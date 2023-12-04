@@ -16,12 +16,13 @@ env/
 .idea/
 
 # Data files
-data/*
-!data/data_preprocessing/
+dataset/*
+!dataset/data_preprocessing/
 *.csv
 *.xlsx
 *.png
 *.pkl
+exp/*
 
 # Trained model files
 # models/
