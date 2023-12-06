@@ -2,7 +2,7 @@
 
 # Path to your files
 file_python="./src/setting_exp.py"
-file_param="./config/params.json"
+file_param="./config/experiments.json"
 
 # Experiments folder
 exp_folder="./exp"
@@ -21,6 +21,7 @@ display_help() {
     echo "  --clr  : Remove result folders. Requires one argument:"
     echo "              1) exp : Remove the folder containing all experiment results"
     echo "              2) grid: Remove the folder containing grid search results"
+    echo "  --TB   : Launch Tensorboard (http://localhost:6006)"
     echo "  --init : Launch the installation of dependencies from requirements.txt"
 }
 
@@ -71,6 +72,9 @@ if [ "$#" -ge 1 ]; then
                     echo "ERROR: Invalid option after '--clr'. Use 'exp' or 'grid'."
                     ;;
             esac
+            ;;
+        "--TB")
+            tensorboard --logdir=exp/logs/
             ;;
         "--init")
             # Execute pip install -r requirements.txt

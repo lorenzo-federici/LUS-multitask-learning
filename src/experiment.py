@@ -1,29 +1,30 @@
 
 import os
-import sys
+# import sys
 import csv
-import keras
+# import keras
 import numpy as np
 import pandas as pd
 from pathlib import Path
 
-from keras import backend as K
-import matplotlib.pyplot as plt
-import seaborn as sns
-from sklearn.metrics import confusion_matrix
+# from keras import backend as K
+# import matplotlib.pyplot as plt
 from sklearn.utils.class_weight import compute_class_weight
+from keras.callbacks import *
 
 from utils.loss import *
 from utils.metrics import *
-from utils.dataset import *
-from utils.callbacks import CustomCallbacks
+
+# from utils.callbacks import CustomCallbacks
 
 from models.network import Network
-from utils.utilities import *
+from utils.dataview import *
 
-from datetime import datetime, date
-from keras.optimizers.legacy import Adam, SGD
+# from datetime import datetime, date
+from keras.optimizers import Adam, SGD
 # from tensorflow.keras.saving import load_model
+
+from utils.dataset import DatasetHandler
 
 class Experiment:
     def __init__(self, base_path, exp_name, force_split = False, output_mode = (False, True)):
@@ -33,6 +34,7 @@ class Experiment:
         self.exp_name  = exp_name
         self.exp_path  = None
         self.force_split = force_split
+        self.dataset_dir = None
 
         self.seed, self.n_class, self.img_shape = (
             None,
@@ -40,50 +42,19 @@ class Experiment:
             None,
         )
         self.exp_config = None
-        self.dataset, self.ds_infos, self.train_ds, self.val_ds, self.test_ds, self.class_weight_dicts = (
-            None,
-            None,
-            None,
+
+        self.dataset = None
+        self.x_train, self.x_val, self.x_test, = (
             None,
             None,
             None
         )
-        self.y_train_ds, self.y_val_ds, self.y_test_ds = (
+        self.y_train, self.y_val, self.y_test, = (
             None,
             None,
             None
         )
-        self.train_subset_idxs, self.val_subset_idxs, self.test_subset_idxs = (
-            None,
-            None,
-            None
-        )
-
-    def build_experiment(self, setting, exp_config):
-        self.seed, self.n_class, self.img_shape = (
-            setting['SEED'],
-            setting['N_CLASS'],
-            setting['IMG_SHAPE'],
-        )
-        self.exp_config = exp_config
-
-        self.get_exp_name()
-
-        # self.exp_path = os.path.join(self.exp_path, self.name)
-        self.exp_path = os.path.join(self.base_path, 'exp', self.exp_name, self.name)
-        if os.path.exists(self.exp_path):
-            dir_exp = os.path.join(self.base_path, 'exp', self.exp_name)
-            n_exp = sum(1 for dir in os.listdir(dir_exp) if dir.startswith(self.name) and os.path.isdir(os.path.join(dir_exp, dir))) + 1
-            self.exp_path = self.exp_path + f'_{n_exp}'
-        
-        os.makedirs(self.exp_path + '/fig')
-
-        with open(self.exp_path + '/model_config.csv', mode='w', newline='') as file_csv:
-            writer = csv.writer(file_csv)
-            writer.writerow(self.exp_config.keys())
-            writer.writerow(self.exp_config.values())
-        
-        self.load_dataset()
+        self.train_class_weights = None
 
     def get_exp_name(self):
         if 'name' in self.exp_config:
@@ -108,111 +79,110 @@ class Experiment:
                 self.exp_config.get('dropout', .0),
                 self.exp_config.get('dil_rate', 1)
                 )
-            
+
+    def build(self, setting, exp_config):
+        self.seed, self.n_class, self.img_shape = (
+            setting['SEED'],
+            setting['N_CLASS'],
+            setting['IMG_SHAPE'],
+        )
+        self.exp_config = exp_config
+
+        self.get_exp_name()
+
         print('\n')
         print("-"*90)
         print(f">> EXPERIMENT: {self.name} <<")
         print("-"*90)
+
+        self.exp_path    = os.path.join(self.base_path, 'exp', self.exp_name, self.name)
+        self.dataset_dir = os.path.join(self.base_path, 'dataset/TFRecords')
+
+        os.makedirs(self.exp_path + '/fig', exist_ok=True)
+
+        with open(self.exp_path + '/model_config.csv', mode='w', newline='') as file_csv:
+            writer = csv.writer(file_csv)
+            writer.writerow(self.exp_config.keys())
+            writer.writerow(self.exp_config.values())
         
+        self.load_dataset()
+
     def load_dataset(self):
-        if self.dataset is None:
-            dataset_h5 = os.path.join(self.base_path, 'data/iclus', 'dataset.h5')
-            pkl_framesmap = os.path.join(self.base_path, 'data/iclus', 'hdf5_frame_index_map.pkl')
-            self.dataset = RichHDF5Dataset(dataset_h5, pkl_framesmap)
+        shuffle_bsize = 100 # TODO: ricontrolla
 
-    def calculate_class_weights(self):
-        ds_labels = self.ds_infos['labels']
+        self.dataset = DatasetHandler(self.dataset_dir,
+                                      shuffle_bsize = shuffle_bsize,
+                                      random_state = self.seed)
+        self.dataset.build()
+        print('>> Dataset Loaded')
 
-        # Extract the labels for the current subset
-        self.y_train_ds = np.array(ds_labels)[self.train_subset_idxs]
-        self.y_val_ds   = np.array(ds_labels)[self.val_subset_idxs]
-        self.y_test_ds  = np.array(ds_labels)[self.test_subset_idxs]
-
-        # Calculate class balance using 'compute_class_weight'
-        class_weights_train = compute_class_weight('balanced', classes=np.unique(self.y_train_ds), y=self.y_train_ds)
-        class_weights_val   = compute_class_weight('balanced', classes=np.unique(self.y_val_ds), y=self.y_val_ds)
-        class_weights_test  = compute_class_weight('balanced', classes=np.unique(self.y_test_ds), y=self.y_test_ds)
-
-        # Create a dictionary that maps classes to their weights
-        class_weight_dict_train = dict(enumerate(class_weights_train))
-        class_weight_dict_val   = dict(enumerate(class_weights_val))
-        class_weight_dict_test  = dict(enumerate(class_weights_test))
-
-        train_idxs_p = round((len(self.train_subset_idxs) / len(self.dataset)) * 100)
-        val_idxs_p = round((len(self.val_subset_idxs) / len(self.dataset)) * 100)
-        test_idxs_p = 100 - (train_idxs_p + val_idxs_p)
-
-        print('\n>> SPLITTING:')
-        print(f">>> Dataset Split: Train={len(self.train_subset_idxs)}({train_idxs_p}%), Val={len(self.val_subset_idxs)}({val_idxs_p}%), Test={len(self.test_subset_idxs)}({test_idxs_p}%)")
-        print(f">>> Train Class Weights: {class_weight_dict_train}")
-        print(f">>> Val Class Weights: {class_weight_dict_val}")
-        print(f">>> Test Class Weights: {class_weight_dict_test}")
-
-        self.class_weight_dicts = [class_weight_dict_train, class_weight_dict_val, class_weight_dict_test]
-
-    def split_dataset(self):
-        if self.dataset is None:
-            self.load_dataset()
-
-        split_ratios = self.exp_config['split_ratio']
-        batch_size, task, augmentation = (
-            self.exp_config['batch_size'],
-            self.exp_config['task'],
-            self.exp_config['augmentation'],
-        )
-
-        pkl_centersdict_path = os.path.join(
-            self.base_path, 'data/iclus', 'hospitals-patients-dict.pkl'
-        )
-
-        split_path = os.path.join(self.base_path, "exp/split_index.pkl")
-
-        if not os.path.exists(split_path) and self.train_subset_idxs == None or self.force_split:
-            _data_split_strategy = split_strategy(
-                self.dataset,
-                ratios=split_ratios,
-                pkl_file=pkl_centersdict_path,
-                rseed=self.seed,
+    def split_dataset(self, set_view = None):
+        # gather the needed settings and data
+        split_ratio, batch_size, task, augmentation = (
+                self.exp_config['split_ratio'],
+                self.exp_config['batch_size'],
+                self.exp_config['task'],
+                self.exp_config['augmentation'],
             )
-
-            self.train_subset_idxs, self.val_subset_idxs, self.test_subset_idxs, self.ds_infos = _data_split_strategy
-            split_dict = {
-                "train": self.train_subset_idxs,
-                "val": self.val_subset_idxs,
-                "test": self.test_subset_idxs,
-                "info": self.ds_infos
-            }
-
-            with open(split_path, "wb") as file:
-                pickle.dump(split_dict, file)
-        else:
-            with open(split_path, "rb") as file:
-                split_dict = pickle.load(file)
-                self.train_subset_idxs, self.val_subset_idxs, self.test_subset_idxs, self.ds_infos = (
-                    split_dict["train"],
-                    split_dict["val"],
-                    split_dict["test"],
-                    split_dict["info"]
-                )
         
-        self.train_ds = TFDataset(self.dataset, self.train_subset_idxs, batch_size, task, is_train=augmentation).as_iterator()
-        self.val_ds   = TFDataset(self.dataset, self.val_subset_idxs, batch_size, task, is_train=False).as_iterator()
-        self.test_ds  = TFDataset(self.dataset, self.test_subset_idxs, batch_size, task, is_train=False).as_iterator()
+        # split dataset
+        self.dataset.split_dataset(split_ratio)
 
-        self.calculate_class_weights()
+        # prepare sets
+        self.x_train, self.y_train = self.dataset.prepare_tfrset('train')
+        self.x_val, self.y_val = self.dataset.prepare_tfrset('val')
+        self.x_test, self.y_test = self.dataset.prepare_tfrset('test')
+        
+        # generate sets
+        # create the train, (val) and test sets to feed the neural networks
+        self.x_train = self.dataset.generate_tfrset(self.x_train,
+                                                    batch_size=batch_size,
+                                                    shuffle=True,
+                                                    augment=augmentation)
+        self.x_val  = self.dataset.generate_tfrset(self.x_val, batch_size=batch_size) 
+        self.x_test = self.dataset.generate_tfrset(self.x_test, batch_size=batch_size)
+
+        print('>> Dataset Splitted')
+
+        self.compute_class_weight()
+
+        if set_view is not None:
+            print('>> Print Batches:')
+            plot_set_batches(self, set=set_view, num_batches=10)
+
+    def compute_class_weight(self):
+        # calculate class balance using 'compute_class_weight'
+        train_class_weights = compute_class_weight('balanced', classes=np.unique(self.y_train), y=self.y_train)
+        train_class_weights = np.round(train_class_weights, 4)
+
+        self.train_class_weights = dict(enumerate(train_class_weights))
+
+        print('>> Class Weights Computed')
+    
+    def generate_split_charts(self, charts=None):
+        # default graphs
+        charts = charts or ["pdistr", "lsdistr_pie"]
+        
+        # get the output mode
+        display, save = self.output_mode
+        
+        save_path = os.path.join(self.base_path, "exp/")
+        plot_charts(self, charts, display, save, save_path)
+
+        print('>> Split Charts Generated')
 
     def build_model(self):
         model_obj = Network(self.exp_config, num_classes_cls = self.n_class)
         model = model_obj.build_model()
         return model
-    
+
     def compile_model(self, model):
         def get_metric_loss():
             task = self.exp_config['task']
             
             task_mapping = {
                 'multitask': {
-                    'lossFunc': {'cls_label': weighted_categorical_crossentropy(list(self.class_weight_dicts[0].values())), 'seg_mask': dice_coef_loss},
+                    'lossFunc': {'cls_label': weighted_categorical_crossentropy(list(self.train_class_weights.values())), 'seg_mask': dice_coef_loss},
                     'lossWeights': {'cls_label': 0.5, 'seg_mask': 1},
                     'metrics': {'cls_label': 'accuracy', 'seg_mask': [dice_coef, iou, tversky]}
                 },
@@ -222,7 +192,7 @@ class Experiment:
                     'metrics': [dice_coef, iou, tversky]
                 },
                 'classification': {
-                    # 'lossFunc': weighted_categorical_crossentropy(list(self.class_weight_dicts[0].values())),
+                    # 'lossFunc': weighted_categorical_crossentropy(list(self.train_class_weights.values())),
                     'lossFunc': categorical_crossentropy,
                     'lossWeights': 1,
                     'metrics': 'accuracy'
@@ -261,69 +231,105 @@ class Experiment:
         
         return model
     
-    def train_model(self, model):
-        if self.train_ds is None:
-            print('>> ERROR Dataset not uploaded')
-            return None
+    def train_model(self, model, gradcam_freq=5, status_bar=None):
+        # parameters
+        batch_size, epochs, task = (
+                    self.exp_config['batch_size'],
+                    self.exp_config['epoch'],
+                    self.exp_config['task']
+                )
+        ckpt_filename    = os.path.join(self.exp_path, "weights/", "best_weights.h5")
+        bck_path         = os.path.join(self.exp_path, "backup/")
+        tensorboard_path = os.path.join(self.base_path, "exp/", "logs/fit/", self.name)
 
-        task = self.exp_config['task']
+        verbose, _ = self.output_mode
 
-        callbacks = CustomCallbacks(self.exp_path, self.exp_config['backbone'], task).get_list_callbacks()
+        # callbacks
+        tensorboard = TensorBoard(log_dir=tensorboard_path, histogram_freq=1)
+        backup = BackupAndRestore(backup_dir=bck_path)
+        checkpoint = ModelCheckpoint(ckpt_filename, monitor='val_loss', save_weights_only=True, save_best_only=True, verbose=verbose)
+        early_stop = EarlyStopping(monitor='val_loss', patience=15, verbose=verbose)
+        reduce_lr = ReduceLROnPlateau(monitor='val_loss', factor=0.2, patience=10, min_lr=1e-6, verbose=verbose)
+
+        # build callbacks list
+        callbacks = [tensorboard, backup, checkpoint, early_stop, reduce_lr]
+        
+        # compute train and val steps per epoch
+        train_steps = self.dataset.frame_counts['train'] // batch_size
+        val_steps   = self.dataset.frame_counts['val'] // batch_size
 
         print('\n')
         print("-"*60)
         print('\t\t   ~~~~~~ TRAINING ~~~~~')
         print("-"*60)
 
-        # steps
-        batch_size = 16
-        train_samples = len(self.train_subset_idxs)
-        train_steps = train_samples // batch_size
-        if train_samples % batch_size != 0:
-            train_steps += 1
-
-        val_samples = len(self.val_subset_idxs)
-        val_steps = val_samples // batch_size
-        if val_samples % batch_size != 0:
-            val_steps += 1
-
+        # neural network fit
         if task == 'classification':
             history = model.fit(
-                self.train_ds,
-                epochs           = self.exp_config['epoch'],
-                steps_per_epoch  = train_steps,
-                validation_data  = self.val_ds,
-                class_weight     = self.class_weight_dicts[0],
-                validation_steps = val_steps,
-                callbacks        = callbacks,
-                workers = 8
+                self.x_train,
+                epochs              = epochs,
+                steps_per_epoch     = train_steps,
+                validation_data     = self.x_val,
+                class_weight        = self.train_class_weights,
+                validation_steps    = val_steps,
+                callbacks           = callbacks,
+                workers             = 8,
+                use_multiprocessing = False,
+                # verbose             = verbose
+                verbose = 1
             )
         else:
             history = model.fit(
-                self.train_ds,
-                shuffle         = True,
-                epochs          = self.exp_config['epoch'],
-                validation_data = self.val_ds,
-                callbacks       = callbacks,
+                self.x_train,
+                epochs              = epochs,
+                steps_per_epoch     = train_steps,
+                validation_data     = self.x_val,
+                validation_steps    = val_steps,
+                callbacks           = callbacks,
+                workers             = 8,
+                use_multiprocessing = False,
+                # verbose             = verbose
             )
-
+        
         return history
-    
+
+    def get_train_graphs(self, history):
+        # Get the loss and metrics from history
+        history_keys = history.history.keys()
+        task = self.exp_config['task']
+
+        save_path = os.path.join(self.exp_path, "fig/")
+
+        loss_key = [k for k in history_keys if 'loss' in k and 'val' not in k]
+        plot_train_history(self.name, history, loss_key, save_path, self.output_mode)
+
+        if task == 'multitask':
+            metrics_keys_seg = [key for key in history_keys if((key not in loss_key) and ('mask' in key) and ('val' not in key) and ('lr' not in key))]
+            metrics_keys_cls = [key for key in history_keys if((key not in loss_key) and ('cls' in key) and ('val' not in key) and ('lr' not in key))]
+            if metrics_keys_seg:
+                plot_train_history(self.name, history, metrics_keys_seg, save_path, self.output_mode)
+            if metrics_keys_cls:
+                plot_train_history(self.name, history, metrics_keys_cls, save_path, self.output_mode)
+        elif task == 'classification':
+            metrics_keys_seg = [key for key in history_keys if((key not in loss_key) and ('val' not in key) and ('lr' not in key))]
+            plot_train_history(self.name, history, metrics_keys_seg, save_path, self.output_mode)
+        elif task == 'segmentation':
+            plot_train_history(self.name, history, ['accuracy'], save_path, self.output_mode)
+
+        if 'lr' in history_keys:
+            plot_train_history(self.name, history, ['lr'], save_path, self.output_mode)
+
     def evaluation_model(self, model):
         model_path = f"{self.exp_path}/checkpoint/best.h5"
 
         if os.path.exists(model_path):
-            # model = load_model(model_path, compile=False)
             print("Loading best weights")
             model.load_weights(model_path)
         
         model = self.compile_model(model)
 
-        batch_size = self.exp_config['batch_size']
-        test_samples = len(self.test_subset_idxs)
-        test_steps = test_samples // batch_size
-        if test_samples % batch_size != 0:
-            test_steps += 1
+        batch_size = self.exp_config['batch_size']    
+        test_steps = -(-self.dataset.frame_counts['test'] // batch_size)
 
         print('\n')
         print("-"*60)
@@ -332,13 +338,13 @@ class Experiment:
 
         # EVALUATION
         evaluate = model.evaluate(
-            self.test_ds,
-            batch_size=batch_size,
+            self.x_test,
+            batch_size  = batch_size,
+            steps       = test_steps,
+            workers     = 1,
+            return_dict = True,
+            use_multiprocessing = False
             # sample_weight=self.class_weight_dicts[2],
-            steps=test_steps,
-            workers=1,
-            use_multiprocessing=False,
-            return_dict=True
         )
 
         df = pd.DataFrame([evaluate])
@@ -350,128 +356,17 @@ class Experiment:
         print("-"*60)
 
         # PREDICT & CONFUSION_MTRX
-        test_prediction = model.predict(
-            self.test_ds,
-            batch_size=self.exp_config['batch_size'],
-            steps=test_steps,
-            callbacks=None,
-            workers=1,
-            use_multiprocessing=False
+        y_pred = model.predict(
+            self.x_test,
+            batch_size = batch_size,
+            steps      = test_steps,
+            workers    = 1,
+            use_multiprocessing = False
         )
 
-        score_test = self.y_test_ds
-        pred_score = tf.argmax(test_prediction, axis=-1)
-        cf_matrix_test = confusion_matrix(score_test, pred_score, normalize='true', labels=[list(range(self.n_class))])
+        if len(y_pred.shape) > 1:
+            y_pred = tf.argmax(y_pred, axis=-1)
 
-        ax = sns.heatmap(cf_matrix_test, linewidths=1, annot=True, fmt='.2f', cmap="BuPu")
-        ax.set_ylabel('Actual')
-        ax.set_xlabel('Predicted')
-        ax.set_title('Test Set Confusion Matrix')
-
-        display, save = self.output_mode
-
-        if save:
-            train_graphs_path = os.path.join(self.exp_path, 'fig' , "confusion_matrix.png")
-            plt.savefig(train_graphs_path)
-
-        # Show the figure
-        if display:
-            plt.show()
-        
-        plt.clf()
-        plt.close()
+        confusionmatrix(self, self.y_test, y_pred)
 
         return evaluate
-    
-    # Plot function -----------------------------------------------------------------------------
-    def generate_split_charts(self, charts=None):
-        if self.ds_infos is not None:
-            if charts is None:
-                charts = ["piesetsrclass", "piesrclass", "pdistr", "ldistr"]
-            
-            # get the output mode
-            display_mode = self.output_mode
-
-            save_path = Path(self.exp_path).parent.parent
-   
-            if "piesetsrclass" in charts:
-                chart_file_path = os.path.join(save_path, "split_pie_per_sets_class.png")
-                plot_fdistr_per_sets_class_pie(self.y_train_ds, self.y_val_ds, self.y_test_ds, chart_file_path,output_mode=display_mode)
-            
-            if "piesrclass" in charts:
-                chart_file_path = os.path.join(save_path, "split_pie_per_class.png")
-                plot_fdistr_per_class_pie(self.ds_infos['labels'], chart_file_path,output_mode=display_mode)
-
-            if "pdistr" in charts:
-                chart_file_path = os.path.join(save_path, "split_per_patients.png")
-                plot_patients_split(self.ds_infos, chart_file_path, output_mode=display_mode)
-
-            if "ldistr" in charts:
-                chart_file_path = os.path.join(save_path, "split_distr_labels_per_set.png")
-                plot_labels_distr(self.y_train_ds, self.y_val_ds, self.y_test_ds, chart_file_path, output_mode=display_mode)
-        else:
-            raise Exception('dataset not yet splitted.')
-
-    def nn_train_graphs(self, history):
-        def _plot_histo(history, keys):
-            nkey = len(keys)
-            if nkey == 1:
-                fig, ax = plt.subplots(1, nkey, figsize=(6, 6))
-                ax.plot(history.history[keys[0]], label=keys[0])
-                if not keys[0] == 'lr':
-                    val_key = ('val_' + keys[0])
-                    ax.plot(history.history[val_key], label=val_key, linestyle='--')
-
-                ax.legend()
-                ax.set_xlabel('epoch')
-                ax.set_title(f'{keys[0]}')
-                ax.grid()
-                fig.suptitle(self.name)
-            else:
-                fig, ax = plt.subplots(1, nkey, figsize=(12, 4))
-                for i in range(nkey):
-                    ax[i].plot(history.history[keys[i]], label=keys[i])
-                    val_key = ('val_' + keys[i])
-                    ax[i].plot(history.history[val_key], label=val_key, linestyle='--')
-
-                    ax[i].legend()
-                    ax[i].set_xlabel('epoch')
-                    ax[i].set_title(f'{keys[i]}')
-                    ax[i].grid()
-                fig.suptitle(self.name)
-            
-            display, save = self.output_mode
-
-            if save:
-                save_path = self.exp_path + "/fig/"
-                train_graphs_path = os.path.join(save_path, f"train_graphs{keys[0]}.png")
-                plt.savefig(train_graphs_path)
-
-            # Show the figure
-            if display:
-                plt.show()
-            
-            plt.clf()
-            plt.close()
-
-        # Get the loss and metrics from history
-        history_keys = history.history.keys()
-
-        loss_key = [k for k in history_keys if 'loss' in k and 'val' not in k]
-        _plot_histo(history, loss_key)
-
-        if self.exp_config['task'] == 'multitask':
-            metrics_keys_seg = [key for key in history_keys if((key not in loss_key) and ('mask' in key) and ('val' not in key) and ('lr' not in key))]
-            metrics_keys_cls = [key for key in history_keys if((key not in loss_key) and ('cls' in key) and ('val' not in key) and ('lr' not in key))]
-            if len(metrics_keys_seg) > 0:
-                _plot_histo(history, metrics_keys_seg)
-            if len(metrics_keys_cls) > 0:
-                _plot_histo(history, metrics_keys_cls)
-        elif self.exp_config['task'] == 'classification':
-            metrics_keys_seg = [key for key in history_keys if((key not in loss_key) and ('val' not in key) and ('lr' not in key))]
-            _plot_histo(history, metrics_keys_seg)
-        elif self.exp_config['task'] == 'segmentation':
-            _plot_histo(history, ['accuracy'])
-
-        if 'lr' in history_keys:
-            _plot_histo(history, ['lr'])

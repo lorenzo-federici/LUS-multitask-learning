@@ -17,7 +17,7 @@ env/
 
 # Data files
 dataset/*
-!dataset/data_preprocessing/
+!dataset/tf-records-preprocessing
 *.csv
 *.xlsx
 *.png

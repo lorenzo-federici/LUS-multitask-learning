@@ -1,0 +1,32 @@
+{
+    "SETTING": {
+        "IMG_SHAPE": 224,
+        "N_CLASS": 4,
+        "SEED": 24
+    },
+    "EXPS": [
+        [
+            {"backbone": "ResNet", "type": "18", "task": "classification", "out_class": 4, "batch_size": 8, "epoch": 30, "split_ratio": [0.6, 0.2, 0.2], "optimizer": "SGD", "lr": 0.01, "augmentation": true},
+            {"backbone": "ResNet", "type": "18", "task": "classification", "out_class": 4, "batch_size": 16, "epoch": 30, "split_ratio": [0.6, 0.2, 0.2], "optimizer": "SGD", "lr": 0.01, "augmentation": true},
+            {"backbone": "ResNet", "type": "18", "task": "classification", "out_class": 4, "batch_size": 32, "epoch": 30, "split_ratio": [0.6, 0.2, 0.2], "optimizer": "SGD", "lr": 0.01, "augmentation": true},
+            {"backbone": "ResNet", "type": "18", "task": "classification", "out_class": 4, "batch_size": 64, "epoch": 30, "split_ratio": [0.6, 0.2, 0.2], "optimizer": "SGD", "lr": 0.01, "augmentation": true},
+            {"backbone": "ResNet", "type": "18", "task": "classification", "out_class": 4, "batch_size": 8, "epoch": 30, "split_ratio": [0.6, 0.2, 0.2], "optimizer": "SGD", "lr": 0.01, "augmentation": true, "weights": "imagenet", "layer_to_freeze": "enc_2"},
+            {"backbone": "ResNet", "type": "18", "task": "classification", "out_class": 4, "batch_size": 16, "epoch": 30, "split_ratio": [0.6, 0.2, 0.2], "optimizer": "SGD", "lr": 0.01, "augmentation": true, "weights": "imagenet", "layer_to_freeze": "enc_2"},
+            {"backbone": "ResNet", "type": "18", "task": "classification", "out_class": 4, "batch_size": 32, "epoch": 30, "split_ratio": [0.6, 0.2, 0.2], "optimizer": "SGD", "lr": 0.01, "augmentation": true, "weights": "imagenet", "layer_to_freeze": "enc_2"},
+            {"backbone": "ResNet", "type": "18", "task": "classification", "out_class": 4, "batch_size": 64, "epoch": 30, "split_ratio": [0.6, 0.2, 0.2], "optimizer": "SGD", "lr": 0.01, "augmentation": true, "weights": "imagenet", "layer_to_freeze": "enc_2"}
+        ],
+        [
+            {"backbone": "ResNet", "type": "18", "task": "classification", "out_class": 4, "batch_size": 8, "epoch": 30, "split_ratio": [0.6, 0.2, 0.2], "optimizer": "Adam", "lr": 0.001, "augmentation": true},
+            {"backbone": "ResNet", "type": "18", "task": "classification", "out_class": 4, "batch_size": 16, "epoch": 30, "split_ratio": [0.6, 0.2, 0.2], "optimizer": "Adam", "lr": 0.001, "augmentation": true},
+            {"backbone": "ResNet", "type": "18", "task": "classification", "out_class": 4, "batch_size": 32, "epoch": 30, "split_ratio": [0.6, 0.2, 0.2], "optimizer": "Adam", "lr": 0.001, "augmentation": true},
+            {"backbone": "ResNet", "type": "18", "task": "classification", "out_class": 4, "batch_size": 64, "epoch": 30, "split_ratio": [0.6, 0.2, 0.2], "optimizer": "Adam", "lr": 0.001, "augmentation": true},
+            {"backbone": "ResNet", "type": "18", "task": "classification", "out_class": 4, "batch_size": 8, "epoch": 30, "split_ratio": [0.6, 0.2, 0.2], "optimizer": "Adam", "lr": 0.001, "augmentation": true, "weights": "imagenet", "layer_to_freeze": "enc_2"},
+            {"backbone": "ResNet", "type": "18", "task": "classification", "out_class": 4, "batch_size": 16, "epoch": 30, "split_ratio": [0.6, 0.2, 0.2], "optimizer": "Adam", "lr": 0.001, "augmentation": true, "weights": "imagenet", "layer_to_freeze": "enc_2"},
+            {"backbone": "ResNet", "type": "18", "task": "classification", "out_class": 4, "batch_size": 32, "epoch": 30, "split_ratio": [0.6, 0.2, 0.2], "optimizer": "Adam", "lr": 0.001, "augmentation": true, "weights": "imagenet", "layer_to_freeze": "enc_2"},
+            {"backbone": "ResNet", "type": "18", "task": "classification", "out_class": 4, "batch_size": 64, "epoch": 30, "split_ratio": [0.6, 0.2, 0.2], "optimizer": "Adam", "lr": 0.001, "augmentation": true, "weights": "imagenet", "layer_to_freeze": "enc_2"}
+        ],
+        [
+            {"backbone": "ResNet", "type": "18", "task": "classification", "out_class": 4, "batch_size": 16, "epoch": 25, "split_ratio": [0.6, 0.2, 0.2], "optimizer": "Adam", "lr": 0.001, "augmentation": true, "weights": "imagenet", "layer_to_freeze": "enc_2", "dropout": 0.1, "dil_rate": 2}
+        ]
+    ]
+}

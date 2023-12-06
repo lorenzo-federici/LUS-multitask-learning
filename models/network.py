@@ -30,7 +30,7 @@ class Network:
         '''Create model name'''
         backbone_mapping = {
             'VGG16': 'VGG16_UNet',
-            f'ResNet_{self.type}': 'ResUNet'
+            f'ResNet{self.type}': 'ResUNet'
         }
         if self.task == 'classification':
             name = self.backbone + f'_{self.type}'
@@ -39,24 +39,18 @@ class Network:
         return name
     
     def build_model(self):
-        print('\n')
         print('>> BUILDING MODEL:')
-        print(f'\tTask --> {self.task}')
-        print(f'\tModel --> {self.model_name}')
-        bs = self.exp_config["batch_size"]
-        lr = self.exp_config["lr"]
-        opt = self.exp_config["optimizer"]
-        epoch = self.exp_config["epoch"]
-        aug = self.exp_config["augmentation"]
-        print(f'\tBatch size --> {bs}')
-        print(f'\tOptimizer --> {opt} lr:{lr}')
-        print(f'\tEpoch --> {epoch}')
-        print(f'\tModel --> {aug}')
-        print(f'\tDropout --> {self.dropout}')
+        print(f'\t• Task --> {self.task}')
+        print(f'\t• Model --> {self.model_name}')
+        print(f'\t• Batch size --> {self.exp_config["batch_size"]}')
+        print(f'\t• Optimizer --> {self.exp_config["optimizer"]} lr:{self.exp_config["lr"]}')
+        print(f'\t• Epoch --> {self.exp_config["epoch"]}')
+        print(f'\t• Model --> {self.exp_config["augmentation"]}')
+        print(f'\t• Dropout --> {self.dropout}')
 
         if not self.weights == None:
-            print('\tTrasfer learning Active from IMAGENET')
-            print(f'\tFreeze --> {self.layer_to_freeze}')
+            print('\t• Trasfer learning Active from IMAGENET')
+            print(f'\t• Freeze --> {self.layer_to_freeze}')
 
         if self.task == 'multitask':
             seg_model = self.segmentation_model()
