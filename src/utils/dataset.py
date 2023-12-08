@@ -134,17 +134,29 @@ class DatasetHandler():
         mask_data = tf.io.decode_jpeg(record['mask'], channels=1)
         mask = tf.image.resize(mask_data, [self.input_size, self.input_size])
         mask = tf.where(mask > 0, 1.0, mask)
-
-        # if self.task == 'classification':
-        #     retval = [frame, label]
-        # elif self.task == 'segmentation':
-        #     retval = [frame, mask]
-        # else: 
-        #     retval = [frame, mask, label]
-        
         return frame, mask, label
-
+    
     def generate_tfrset(self, pre_dataset, batch_size, shuffle=False, augment=False):
+        def _map_augmentation(x, m, y):
+            # if augment:
+            #     x, m = self.augmenter.us_augmentation_seg(x, m)
+            # if self.task == 'classification':
+            #     retval = x, y
+            # elif self.task == 'segmentation':
+            #     retval = x, m
+            # else:
+            #     retval = x, m, y
+            # return retval
+
+            if augment:
+                x, m = self.augmenter.us_augmentation_seg(x, m)
+
+            task_mapping = {
+                'classification': (x, y),
+                'segmentation': (x, m),
+            }
+            return task_mapping.get(self.task, (x, m, y))
+        
         # mapping
         dataset = pre_dataset.map(self._parse_lus_movie, num_parallel_calls=tf.data.AUTOTUNE)
 
@@ -157,14 +169,7 @@ class DatasetHandler():
         dataset = dataset.batch(batch_size)
 
         # data augmentation
-        if augment:
-            if self.task == 'classification':
-                dataset = dataset.map(lambda x, _, y: (self.augmenter.us_augmentation_cls(x), y), num_parallel_calls=batch_size)
-            elif self.task == 'segmentation':
-                dataset = dataset.map(lambda x, m, _: (self.augmenter.us_augmentation_seg(x, m)), num_parallel_calls=batch_size)
-            else:
-                dataset = dataset.map(lambda x, m, y: (self.augmenter.us_augmentation_seg(x, m), y), num_parallel_calls=batch_size)
-                dataset = dataset.map(lambda x, y: (x[0], x[1], y), num_parallel_calls=batch_size)
+        dataset = dataset.map(_map_augmentation, num_parallel_calls = tf.data.experimental.AUTOTUNE)
 
         
         # infinite and prefetching
