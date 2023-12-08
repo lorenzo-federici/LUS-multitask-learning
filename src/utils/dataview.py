@@ -174,34 +174,58 @@ def confusionmatrix(exp, y_test, y_pred):
 
 # --- IMAGE VISUALIZATION ---
 
+def _print_cls(batch, batch_size):
+    size_grid = batch_size//2
+    class_colors = {0: 'green', 1: 'darkblue', 2: 'darkorange', 3: 'darkred'}   
+    _, axes = plt.subplots(batch_size // size_grid, size_grid, figsize=(20, 3 * (batch_size // 8)))
+    frames, labels = batch
+    for i, (frame, label) in enumerate(zip(frames, labels)):        
+        axes[i // size_grid, i % size_grid].imshow(frame)
+
+        color = class_colors.get(np.argmax(label), 'black')
+        axes[i // size_grid, i % size_grid].set_title(f'Target: {label}', color=color)
+        axes[i // size_grid, i % size_grid].axis('off')
+
+def _print_seg(batch, batch_size):
+    size_grid = batch_size//2
+    _, axes = plt.subplots(batch_size // size_grid, size_grid, figsize=(20, 3 * (batch_size // 8)))
+    frames, masks = batch
+    for i, (frame, mask) in enumerate(zip(frames, masks)):        
+        axes[i // size_grid, i % size_grid].imshow(frame)
+        axes[i // size_grid, i % size_grid].imshow(mask, cmap='jet', alpha=0.2)
+        axes[i // size_grid, i % size_grid].axis('off')
+
+def _print_multi(batch, batch_size):
+    size_grid = batch_size//2
+    class_colors = {0: 'green', 1: 'darkblue', 2: 'darkorange', 3: 'darkred'}
+    _, axes = plt.subplots(batch_size // size_grid, size_grid, figsize=(20, 3 * (batch_size // 8)))
+    
+    # frames, masks = batch[0]
+    # labels =  batch[1]
+    frames, masks, labels = batch
+    
+    for i, (frame, mask, label) in enumerate(zip(frames, masks, labels)):        
+        axes[i // size_grid, i % size_grid].imshow(frame)
+        axes[i // size_grid, i % size_grid].imshow(mask, cmap='jet', alpha=0.2)
+
+        color = class_colors.get(np.argmax(label), 'black')
+        axes[i // size_grid, i % size_grid].set_title(f'Target: {label}', color=color)
+        axes[i // size_grid, i % size_grid].axis('off')
+
 def plot_set_batches(exp, set='train', num_batches=10):
     # gather the needed settings and data
     batch_size = exp.exp_config['batch_size']
-    # color map
-    class_colors = {0: 'green', 1: 'darkblue', 2: 'darkorange', 3: 'darkred'}
     
     sets = {'train': exp.x_train, 'val': exp.x_val}
     selected_set = sets.get(set, exp.x_test)
 
     for batch in selected_set.take(num_batches):
-        #_, axes = plt.subplots(2, 8, figsize=(20, 6))
-        _, axes = plt.subplots(batch_size // 8, 8, figsize=(20, 3 * (batch_size // 8)))
-        
-        frames, labels = batch
-        
-        for i, (frame, label) in enumerate(zip(frames, labels)):        
-            # Stampa l'immagine
-            #axes[i % 2, i // 2].imshow(frame)
-            axes[i // 8, i % 8].imshow(frame)
-
-            # imposta colore e stampa etichetta
-            color = class_colors.get(np.argmax(label), 'black')
-            #axes[i % 2, i // 2].set_title(f'Target: {label}', color=color)
-            axes[i // 8, i % 8].set_title(f'Target: {label}', color=color)
-
-            # Nascondi gli assi
-            #axes[i % 2, i // 2].axis('off')
-            axes[i // 8, i % 8].axis('off')
+        if exp.task == 'classification':
+            _print_cls(batch, batch_size)
+        elif exp.task == 'segmentation':
+            _print_seg(batch, batch_size)
+        else: 
+            _print_multi(batch, batch_size)
 
         plt.tight_layout()
         plt.show()

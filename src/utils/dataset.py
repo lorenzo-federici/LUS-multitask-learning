@@ -1,5 +1,6 @@
 import os
 import random
+import pickle
 import numpy as np
 import tensorflow as tf
 from sklearn.model_selection import train_test_split
@@ -11,12 +12,14 @@ class DatasetHandler():
                  input_size=224, 
                  num_classes=4, 
                  shuffle_bsize=None, 
-                 random_state=42):
+                 random_state=42,
+                 task='multitask'):
             self.dataset_dir = dataset_dir
             self.input_size = input_size
             self.num_classes = num_classes
             self.shuffle_bsize = shuffle_bsize
             self.random_state = random_state
+            self.task = task
 
             self.ds_mapping = {}
             self.split = {}
@@ -58,19 +61,23 @@ class DatasetHandler():
         
         return ds_mapping
 
-
     # dataset splitting based on random patients's selection
     def split_dataset(self, split_ratio=[0.6, 0.2, 0.2]):
         train_ratio, test_ratio, val_ratio = split_ratio
         keys = list(self.ds_mapping.keys())
         
-        # Effettua lo splitting delle chiavi
-        train_keys, test_val_keys = train_test_split(keys, train_size=train_ratio, random_state=self.random_state)
-        val_keys, test_keys = train_test_split(test_val_keys, test_size=test_ratio/(val_ratio+test_ratio), random_state=self.random_state)
-        
-        self.split = {'train': train_keys, 'val': val_keys, 'test': test_keys}
-
-
+        split_info_path = os.path.join(self.dataset_dir, "split_keys.pkl")
+        if not os.path.exists(split_info_path):
+            train_keys, test_val_keys = train_test_split(keys, train_size=train_ratio, random_state=self.random_state)
+            val_keys, test_keys       = train_test_split(test_val_keys, test_size=test_ratio/(val_ratio+test_ratio), random_state=self.random_state)
+            
+            self.split = {'train': train_keys, 'val': val_keys, 'test': test_keys}
+            with open(split_info_path, "wb") as f:
+                pickle.dump(self.split, f)
+        else:
+            with open(split_info_path, "rb") as f:
+                self.split = pickle.load(f)
+    
     # extract set's labels parsing only the scores to avoid computing the frames
     def extract_labels_from_tfrset(self, dataset):
         def _extract_label(example_proto):
@@ -127,17 +134,16 @@ class DatasetHandler():
         mask_data = tf.io.decode_jpeg(record['mask'], channels=1)
         mask = tf.image.resize(mask_data, [self.input_size, self.input_size])
         mask = tf.where(mask > 0, 1.0, mask)
-            
-        return frame, label
 
+        # if self.task == 'classification':
+        #     retval = [frame, label]
+        # elif self.task == 'segmentation':
+        #     retval = [frame, mask]
+        # else: 
+        #     retval = [frame, mask, label]
+        
+        return frame, mask, label
 
-    # set generator to be fed into neural network 
-    # x_train = generate_tfrset(  
-                                # x_train, 
-                                # batch_size=batch_size, 
-                                # shuffle=True,
-                                # augment=augmentation
-                            # )
     def generate_tfrset(self, pre_dataset, batch_size, shuffle=False, augment=False):
         # mapping
         dataset = pre_dataset.map(self._parse_lus_movie, num_parallel_calls=tf.data.AUTOTUNE)
@@ -152,7 +158,14 @@ class DatasetHandler():
 
         # data augmentation
         if augment:
-            dataset = dataset.map(lambda x, y: (self.augmenter.us_augmentation(x), y), num_parallel_calls=batch_size)
+            if self.task == 'classification':
+                dataset = dataset.map(lambda x, _, y: (self.augmenter.us_augmentation_cls(x), y), num_parallel_calls=batch_size)
+            elif self.task == 'segmentation':
+                dataset = dataset.map(lambda x, m, _: (self.augmenter.us_augmentation_seg(x, m)), num_parallel_calls=batch_size)
+            else:
+                dataset = dataset.map(lambda x, m, y: (self.augmenter.us_augmentation_seg(x, m), y), num_parallel_calls=batch_size)
+                dataset = dataset.map(lambda x, y: (x[0], x[1], y), num_parallel_calls=batch_size)
+
         
         # infinite and prefetching
         dataset = dataset.repeat()

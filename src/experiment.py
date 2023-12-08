@@ -35,6 +35,7 @@ class Experiment:
         self.exp_path  = None
         self.force_split = force_split
         self.dataset_dir = None
+        self.task = None
 
         self.seed, self.n_class, self.img_shape = (
             None,
@@ -62,7 +63,7 @@ class Experiment:
         else:
             weights  = self.exp_config.get('weights', None)
             model_name = "{}_{}_{}".format(
-                    self.exp_config['task'],
+                    self.task,
                     self.exp_config['backbone'],
                     self.exp_config.get('type', '18')
                 )
@@ -87,6 +88,7 @@ class Experiment:
             setting['IMG_SHAPE'],
         )
         self.exp_config = exp_config
+        self.task = exp_config['task']
 
         self.get_exp_name()
 
@@ -108,20 +110,20 @@ class Experiment:
         self.load_dataset()
 
     def load_dataset(self):
-        shuffle_bsize = 100 # TODO: ricontrolla
+        shuffle_bsize = 1000 # TODO: ricontrolla
 
         self.dataset = DatasetHandler(self.dataset_dir,
                                       shuffle_bsize = shuffle_bsize,
-                                      random_state = self.seed)
+                                      random_state = self.seed,
+                                      task = self.task)
         self.dataset.build()
-        print('>> Dataset Loaded')
+        print(f'>> Dataset for {self.task} Loaded')
 
     def split_dataset(self, set_view = None):
         # gather the needed settings and data
-        split_ratio, batch_size, task, augmentation = (
+        split_ratio, batch_size, augmentation = (
                 self.exp_config['split_ratio'],
                 self.exp_config['batch_size'],
-                self.exp_config['task'],
                 self.exp_config['augmentation'],
             )
         
@@ -178,8 +180,6 @@ class Experiment:
 
     def compile_model(self, model):
         def get_metric_loss():
-            task = self.exp_config['task']
-            
             task_mapping = {
                 'multitask': {
                     'lossFunc': {'cls_label': weighted_categorical_crossentropy(list(self.train_class_weights.values())), 'seg_mask': dice_coef_loss},
@@ -192,20 +192,20 @@ class Experiment:
                     'metrics': [dice_coef, iou, tversky]
                 },
                 'classification': {
-                    # 'lossFunc': weighted_categorical_crossentropy(list(self.train_class_weights.values())),
-                    'lossFunc': categorical_crossentropy,
+                    'lossFunc': weighted_categorical_crossentropy(list(self.train_class_weights.values())),
+                    # 'lossFunc': categorical_crossentropy,
                     'lossWeights': 1,
                     'metrics': 'accuracy'
                 }
             }
 
-            if task in task_mapping:
-                task_settings = task_mapping[task]
+            if self.task in task_mapping:
+                task_settings = task_mapping[self.task]
                 lossFunc = task_settings.get('lossFunc', None)
                 lossWeights = task_settings.get('lossWeights', None)
                 metrics = task_settings.get('metrics', None)
             else:
-                raise ValueError(f"[ERROR] Unknown task: {task}")
+                raise ValueError(f"[ERROR] Unknown task: {self.task}")
             
             return [lossFunc, lossWeights, metrics]
 
@@ -233,26 +233,33 @@ class Experiment:
     
     def train_model(self, model, gradcam_freq=5, status_bar=None):
         # parameters
-        batch_size, epochs, task = (
+        batch_size, epochs = (
                     self.exp_config['batch_size'],
-                    self.exp_config['epoch'],
-                    self.exp_config['task']
+                    self.exp_config['epoch']
                 )
-        ckpt_filename    = os.path.join(self.exp_path, "weights/", "best_weights.h5")
-        bck_path         = os.path.join(self.exp_path, "backup/")
-        tensorboard_path = os.path.join(self.base_path, "exp/", "logs/fit/", self.name)
+
+        ckpt_filename    = os.path.join(self.exp_path, "weights")
+        bck_path         = os.path.join(self.exp_path, "backup")
+        # tensorboard_path = os.path.join(self.base_path, "exp/", "logs/fit/", self.name)
+
+        if not os.path.exists(ckpt_filename):
+            os.makedirs(ckpt_filename)
+        if not os.path.exists(bck_path):
+            os.makedirs(bck_path)
+            
+        ckpt_filename = os.path.join(ckpt_filename, "best_weights.h5")
 
         verbose, _ = self.output_mode
 
         # callbacks
-        tensorboard = TensorBoard(log_dir=tensorboard_path, histogram_freq=1)
+        # tensorboard = TensorBoard(log_dir=tensorboard_path, histogram_freq=1)
         backup = BackupAndRestore(backup_dir=bck_path)
         checkpoint = ModelCheckpoint(ckpt_filename, monitor='val_loss', save_weights_only=True, save_best_only=True, verbose=verbose)
         early_stop = EarlyStopping(monitor='val_loss', patience=15, verbose=verbose)
         reduce_lr = ReduceLROnPlateau(monitor='val_loss', factor=0.2, patience=10, min_lr=1e-6, verbose=verbose)
 
         # build callbacks list
-        callbacks = [tensorboard, backup, checkpoint, early_stop, reduce_lr]
+        callbacks = [backup, checkpoint, early_stop, reduce_lr]
         
         # compute train and val steps per epoch
         train_steps = self.dataset.frame_counts['train'] // batch_size
@@ -264,13 +271,13 @@ class Experiment:
         print("-"*60)
 
         # neural network fit
-        if task == 'classification':
+        if self.task == 'classification':
             history = model.fit(
                 self.x_train,
                 epochs              = epochs,
                 steps_per_epoch     = train_steps,
                 validation_data     = self.x_val,
-                class_weight        = self.train_class_weights,
+                # class_weight        = self.train_class_weights,
                 validation_steps    = val_steps,
                 callbacks           = callbacks,
                 workers             = 8,

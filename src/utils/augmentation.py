@@ -2,13 +2,14 @@ import tensorflow as tf
 
 class USDataAugmentation():
     def __init__(self, input_size=224, random_state=42):
-        self.input_size = input_size
-        self.random_state = random_state
+        self.input_size       = input_size
+        self.random_state     = random_state
+        self._random_rotation = None
 
     def build(self):
         tf.random.set_seed(self.random_state)
         
-        self._random_rotation = tf.keras.layers.RandomRotation(factor=0.05, seed=self.random_state)
+        self._random_rotation = tf.keras.layers.RandomRotation(factor=0.05, fill_mode='constant', seed=self.random_state)
 
     def _central_crop(self, frame):
         random_zoom = tf.random.uniform([], minval=0.7, maxval=0.9, dtype=tf.float32)
@@ -45,10 +46,24 @@ class USDataAugmentation():
         frame_aug = tf.cond(prob, lambda: self._adjust_brightness(frame), lambda: frame)
         return frame_aug
 
-    def us_augmentation(self, frame):
+    def us_augmentation_cls(self, frame):
         frame = self._random_flip_left_right(frame)
         frame = self._random_centeral_crop(frame)
         frame = self._random_adjust_brightness(frame)
         frame = self._random_rotation(frame)
 
         return frame
+    
+    def us_augmentation_seg(self, frame, mask):
+        output = tf.concat([frame, mask], -1)
+
+        output = self._random_flip_left_right(output)
+        output = self._random_centeral_crop(output)
+        output = self._random_rotation(output)
+
+        frame = output[:, :, :, :3]
+        mask  = output[:, :, :, 3]
+
+        frame = self._random_adjust_brightness(frame)
+    
+        return frame, mask
