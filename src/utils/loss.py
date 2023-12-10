@@ -4,7 +4,6 @@ from keras.losses import categorical_crossentropy
 
 from utils.metrics import *
 
-
 # Segmentation -----------------------------------------------------------------------------------
 def dice_coef_loss(y_true, y_pred):
     '''Dice coefficient loss'''

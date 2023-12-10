@@ -7,6 +7,10 @@ from tensorflow.keras.layers import Input, Conv2D, MaxPooling2D, UpSampling2D, C
 
 # from models.resnet18 import resnet18
 from models.resnet import ResNet
+from models.unet import UNet
+from models.resUnet import *
+from models.resnet50 import *
+
 
 class Network:
     def __init__(self, exp_config, num_classes_seg:int = 1, num_classes_cls:int = 4, input_size:int = 224):
@@ -14,11 +18,10 @@ class Network:
         self.n_class_cls = num_classes_cls
         self.n_class_seg = num_classes_seg
         self.exp_config  = exp_config
-        self.filters     = [16, 32, 64, 128, 256]
+        self.filters     = [16, 32, 64, 128, 256] #, 512, 1024]
 
         self.task     = exp_config.get('task', None)
         self.backbone = exp_config.get('backbone', None)
-        self.type     = exp_config.get('type', '18')
         self.dropout  = exp_config.get('dropout', .0)
         self.weights  = exp_config.get('weights', None)
         self.layer_to_freeze = exp_config.get('layer_to_freeze', None)
@@ -28,14 +31,12 @@ class Network:
 
     def get_model_name(self):
         '''Create model name'''
-        backbone_mapping = {
-            'VGG16': 'VGG16_UNet',
-            f'ResNet{self.type}': 'ResUNet'
-        }
-        if self.task == 'classification':
-            name = self.backbone + f'_{self.type}'
-        else:
-            name = backbone_mapping.get(self.backbone, self.backbone) + "_" + self.task
+
+        name = self.backbone
+        
+        if self.task is not 'classification':
+            name = name + "_UNet"
+        
         return name
     
     def build_model(self):
@@ -59,9 +60,11 @@ class Network:
             output = [cls_model.output, seg_model.output]  # Combine outputs.
             model  = Model(inputs=[seg_model.input], outputs=output, name=f'multitask_{self.model_name}')
         elif self.task == 'segmentation':
-            model = self.segmentation_model()
+            # model = resnet50()
+            # model = UNet()
+            model = ResUNet(self.input_size, model = self.backbone, weights=self.weights, layer_to_freeze=self.layer_to_freeze, num_class=self.n_class_seg, dropout=self.dropout, dil_rate = self.dil_rate)()
         elif self.task == 'classification':
-            model = ResNet(self.input_size, model = self.type, weights=self.weights, layer_to_freeze=self.layer_to_freeze, num_class=self.n_class_cls, dropout=self.dropout, dil_rate = self.dil_rate)()        
+            model = ResNet(self.input_size, model = self.backbone, weights=self.weights, layer_to_freeze=self.layer_to_freeze, num_class=self.n_class_cls, dropout=self.dropout, dil_rate = self.dil_rate)()        
         
         return model
     

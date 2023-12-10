@@ -11,7 +11,7 @@ from keras.utils import get_file
 WEIGHTS_PATH_NO_TOP_18 = 'https://github.com/qubvel/classification_models/releases/download/0.0.1/resnet18_imagenet_1000_no_top.h5'
 
 class ResNet():
-    def __init__(self, input_shape= (224,224,3), model = '18', weights=None, layer_to_freeze=None, num_class=4, dropout=.0, dil_rate = 1):
+    def __init__(self, input_shape= (224,224,3), model = 'resnet18', weights=None, layer_to_freeze=None, num_class=4, dropout=.0, dil_rate = 1):
         self.input_shape = input_shape
         self.model = model
         self.weights = weights
@@ -21,7 +21,7 @@ class ResNet():
         self.dil_rate = dil_rate
     
     def __call__(self):
-        if self.model == '18':
+        if self.model == 'resnet18':
             model = self.resnet18()
         else:
             model = self.resnet50()

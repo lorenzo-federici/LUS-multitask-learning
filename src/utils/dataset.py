@@ -138,16 +138,6 @@ class DatasetHandler():
     
     def generate_tfrset(self, pre_dataset, batch_size, shuffle=False, augment=False):
         def _map_augmentation(x, m, y):
-            # if augment:
-            #     x, m = self.augmenter.us_augmentation_seg(x, m)
-            # if self.task == 'classification':
-            #     retval = x, y
-            # elif self.task == 'segmentation':
-            #     retval = x, m
-            # else:
-            #     retval = x, m, y
-            # return retval
-
             if augment:
                 x, m = self.augmenter.us_augmentation_seg(x, m)
 

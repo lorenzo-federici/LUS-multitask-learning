@@ -1,29 +1,21 @@
-
 import os
-# import sys
 import csv
-# import keras
 import numpy as np
 import pandas as pd
-from pathlib import Path
 
-# from keras import backend as K
-# import matplotlib.pyplot as plt
 from sklearn.utils.class_weight import compute_class_weight
 from keras.callbacks import *
 
 from utils.loss import *
 from utils.metrics import *
 
-# from utils.callbacks import CustomCallbacks
 
 from models.network import Network
 from utils.dataview import *
 
-# from datetime import datetime, date
-from keras.optimizers import Adam, SGD
-# from tensorflow.keras.saving import load_model
+from utils.DisplayCallback import DisplayCallback
 
+from keras.optimizers.legacy import Adam, SGD
 from utils.dataset import DatasetHandler
 
 class Experiment:
@@ -192,8 +184,8 @@ class Experiment:
                     'metrics': [dice_coef, iou, tversky]
                 },
                 'classification': {
-                    'lossFunc': weighted_categorical_crossentropy(list(self.train_class_weights.values())),
-                    # 'lossFunc': categorical_crossentropy,
+                    #'lossFunc': weighted_categorical_crossentropy(list(self.train_class_weights.values())),
+                    'lossFunc': categorical_crossentropy,
                     'lossWeights': 1,
                     'metrics': 'accuracy'
                 }
@@ -253,13 +245,16 @@ class Experiment:
 
         # callbacks
         # tensorboard = TensorBoard(log_dir=tensorboard_path, histogram_freq=1)
-        backup = BackupAndRestore(backup_dir=bck_path)
+        # backup = BackupAndRestore(backup_dir=bck_path)
         checkpoint = ModelCheckpoint(ckpt_filename, monitor='val_loss', save_weights_only=True, save_best_only=True, verbose=verbose)
         early_stop = EarlyStopping(monitor='val_loss', patience=15, verbose=verbose)
         reduce_lr = ReduceLROnPlateau(monitor='val_loss', factor=0.2, patience=10, min_lr=1e-6, verbose=verbose)
 
         # build callbacks list
-        callbacks = [backup, checkpoint, early_stop, reduce_lr]
+        callbacks = [checkpoint, early_stop, reduce_lr]
+        if self.task != 'classification':
+            display_call = DisplayCallback(self.task, self.base_path, model, epoch_interval=gradcam_freq)
+            callbacks.append(display_call)
         
         # compute train and val steps per epoch
         train_steps = self.dataset.frame_counts['train'] // batch_size
@@ -277,7 +272,7 @@ class Experiment:
                 epochs              = epochs,
                 steps_per_epoch     = train_steps,
                 validation_data     = self.x_val,
-                # class_weight        = self.train_class_weights,
+                class_weight        = self.train_class_weights,
                 validation_steps    = val_steps,
                 callbacks           = callbacks,
                 workers             = 8,
