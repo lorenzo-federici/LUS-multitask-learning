@@ -8,56 +8,73 @@ import tensorflow as tf
 import matplotlib
 
 class DisplayCallback(keras.callbacks.Callback):
-    def __init__(self, task, base_path, model, epoch_interval=None):
+    def __init__(self, task, base_path, exp_path, model, epoch_interval=None, output_mode = (False, True)):
         self.epoch_interval = epoch_interval
         self.task = task
         self.data_path = os.path.join(base_path, 'dataset/test/')
         self.model = model
+        self.output_mode = output_mode
+        self.exp_path = exp_path
 
     def on_epoch_end(self, epoch, logs=None):
         if self.epoch_interval and epoch % self.epoch_interval == 0:
-            if self.task == 'multitask':
-                # display_testing_images_multi_hm(epoch)
-                print('DIOCA')
-            elif self.task == 'segmentation':
-                self.display_testing_images(epoch)
+            self.display_testing_images(epoch)
 
     def display_testing_images(self, epoch = None):
-        '''Display test image for callbacks'''
+        '''Display test image for multitask callbacks'''
         pickle_files = os.listdir(self.data_path)
 
-        num_rows = len(pickle_files)
+        num_rows    = len(pickle_files)
         num_columns = 4
-        text_epoch = f'epoch: {epoch:03d}' if epoch is not None else ''
+        text_epoch  = f'epoch: {epoch:03d}' if epoch is not None else ''
+
         _, axes = plt.subplots(num_rows, num_columns, figsize=(10, 10))
         plt.suptitle(text_epoch, fontsize=16)
         for i, pickle_file in enumerate(pickle_files):
             with open(self.data_path + pickle_file, 'rb') as file:
-                img, [_, mask] = pickle.load(file)
+                img, [lbl, mask] = pickle.load(file)
+
+            img_reshaped = tf.reshape(img, (1,224,224,3))
+            prediction   = self.model.predict(img_reshaped)
 
             axes[i, 0].imshow(img, cmap='gray')
             axes[i, 0].set_title(f"Test Image {i+1}")
+            if self.task == 'multitask':
+                lbl_true = tf.argmax(lbl, axis=-1)
+                lbl_pred = tf.argmax(prediction[0], axis=-1)
+                text  = f'class: {lbl_true} --> Pred: {lbl_pred}'
+                color = 'green' if (int(lbl_true) == int(lbl_pred)) else 'red'
+                axes[i, 0].text(20, 200, text, fontsize=10, color=color)
+                prediction = prediction[1]
 
             axes[i, 1].imshow(img)
             axes[i, 1].imshow(mask, cmap='jet', alpha=0.2)
             axes[i, 1].set_title("True Mask")
 
-            img_reshaped = tf.reshape(img, (1,224,224,3))
             heatmap      = self.make_gradcam_heatmap(img_reshaped, 0)
             img_heatmap  = self.merge_gradcam(img, heatmap)
             axes[i, 2].imshow(img_heatmap)
             axes[i, 2].set_title("Heatmap")
 
-            pred_masks = self.model.predict(img_reshaped)
-            axes[i, 3].imshow(pred_masks[0])
+            axes[i, 3].imshow(prediction[0])
             axes[i, 3].set_title("Predicted Mask")
 
         # Hide excess axes
         for ax in axes.ravel():
             ax.axis('off')
 
-        plt.tight_layout()
-        plt.show()
+        display, save = self.output_mode
+
+        if save:
+            os.makedirs(self.exp_path + '/fig/callback', exist_ok=True)
+            train_callback_path = os.path.join(self.exp_path, 'fig/callback' , f"epoch_{epoch}.png")
+            plt.savefig(train_callback_path)
+
+        # Show the figure
+        if display:
+            plt.tight_layout()
+            plt.show()
+            plt.close()
     
     def make_gradcam_heatmap(self, img_array, pred_index=None):
         '''Display heatmap of prediction'''
@@ -68,12 +85,16 @@ class DisplayCallback(keras.callbacks.Callback):
                 last_conv_layer_name = layer.name
                 break
 
+        last_conv_layer_name = 'dec_1'
+
         grad_model = keras.models.Model(
             self.model.inputs, [self.model.get_layer(last_conv_layer_name).output, self.model.output]
         )
 
         with tf.GradientTape() as tape:
             last_conv_layer_output, preds = grad_model(img_array)
+            if self.task == 'multitask':
+                _, preds = preds
             if pred_index is None:
                 pred_index = tf.argmax(preds[0])
             class_channel = preds[:, pred_index]

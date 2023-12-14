@@ -23,3 +23,6 @@ keras-tuner
 
 imblearn
 openpyxl
+
+pydot
+graphviz

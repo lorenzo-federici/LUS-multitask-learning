@@ -33,13 +33,11 @@ class DatasetHandler():
 
             self.augmenter = USDataAugmentation(input_size=input_size, random_state=random_state)
             
-
     # build della classe
     def build(self):
         random.seed(self.random_state)
         self.ds_mapping = self.map_movies_per_patient()
         self.augmenter.build()
-
 
     # conteggio numero di frame per ogni paziente (aggregazione dei tfrecords corrispondenti)
     def map_movies_per_patient(self):
@@ -133,19 +131,21 @@ class DatasetHandler():
         # mask
         mask_data = tf.io.decode_jpeg(record['mask'], channels=1)
         mask = tf.image.resize(mask_data, [self.input_size, self.input_size])
+
         mask = tf.where(mask > 0, 1.0, mask)
-        return frame, mask, label
+        return frame, label, mask
     
     def generate_tfrset(self, pre_dataset, batch_size, shuffle=False, augment=False):
-        def _map_augmentation(x, m, y):
+        def _map_augmentation(x, y, m):
             if augment:
                 x, m = self.augmenter.us_augmentation_seg(x, m)
 
             task_mapping = {
-                'classification': (x, y),
-                'segmentation': (x, m),
+                'segmentation': m,
+                'classification': y
             }
-            return task_mapping.get(self.task, (x, m, y))
+            Y = task_mapping.get(self.task, (y, m))
+            return x, Y
         
         # mapping
         dataset = pre_dataset.map(self._parse_lus_movie, num_parallel_calls=tf.data.AUTOTUNE)

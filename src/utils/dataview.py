@@ -1,7 +1,9 @@
 import os
+import random
 import numpy as np
 import seaborn as sns
 import matplotlib.pyplot as plt
+import tensorflow as tf
 from sklearn.metrics import confusion_matrix
 
 # ---- GRAPH GENERATION ----
@@ -200,17 +202,17 @@ def _print_multi(batch, batch_size):
     class_colors = {0: 'green', 1: 'darkblue', 2: 'darkorange', 3: 'darkred'}
     _, axes = plt.subplots(batch_size // size_grid, size_grid, figsize=(20, 3 * (batch_size // 8)))
     
-    # frames, masks = batch[0]
-    # labels =  batch[1]
-    frames, masks, labels = batch
+    frames, Y = batch
+    labels, masks = Y
     
-    for i, (frame, mask, label) in enumerate(zip(frames, masks, labels)):        
+    for i, (frame, label, mask) in enumerate(zip(frames, labels, masks)):        
         axes[i // size_grid, i % size_grid].imshow(frame)
         axes[i // size_grid, i % size_grid].imshow(mask, cmap='jet', alpha=0.2)
 
         color = class_colors.get(np.argmax(label), 'black')
         axes[i // size_grid, i % size_grid].set_title(f'Target: {label}', color=color)
         axes[i // size_grid, i % size_grid].axis('off')
+
 
 def plot_set_batches(exp, set='train', num_batches=10):
     # gather the needed settings and data
@@ -230,3 +232,70 @@ def plot_set_batches(exp, set='train', num_batches=10):
         plt.tight_layout()
         plt.show()
         plt.close()
+
+def display_prediction_mask(exp, y_pred):
+    def _get_test_images(x_test, batch, n_frame_display, task):
+        iterator = iter(x_test)
+        result_images = []
+        result_masks = []
+
+        for item in iterator:
+            if task == 'multitask':
+                frame, [_, mask] = item
+            elif task == 'segmentation':
+                frame, mask = item
+            num_images_to_take = min(batch, n_frame_display - len(result_images))
+            result_images.extend(frame[:num_images_to_take])
+            result_masks.extend(mask[:num_images_to_take])
+
+            # Break se il numero totale di immagini è stato raggiunto
+            if len(result_images) == n_frame_display:
+                break
+
+        return result_images, result_masks
+    
+    n_display_pred = 5
+    if exp.task == 'multitask':
+        lbl_pred = y_pred[0]
+        msk_pred = y_pred[1]
+        if len(lbl_pred.shape) > 1:
+            lbl_pred = tf.argmax(lbl_pred, axis=-1)
+    else:
+        msk_pred = y_pred
+
+    x_images, x_masks = _get_test_images(exp.x_test, exp.exp_config['batch_size'], len(exp.y_test), exp.task)
+    random_idx = [random.randint(0, len(exp.y_test)-1) for _ in range(n_display_pred)]
+    
+    figsize = 30
+    _, axes = plt.subplots(n_display_pred, 3, figsize=(figsize, figsize))
+    for i,idx in enumerate(random_idx):
+        axes[i,0].imshow(x_images[idx], cmap='gray')
+        axes[i,0].set_title(f"Test Image {i+1}", fontsize=20)
+        axes[i,0].axis('off')
+        if exp.task == 'multitask':
+            lbl_true = exp.y_test
+            text  = f'class: {lbl_true[idx]} --> Pred: {lbl_pred[idx]}'
+            color = 'green' if (int(lbl_true[idx]) == int(lbl_pred[idx])) else 'red'
+            axes[i, 0].text(20, 200, text, fontsize=figsize-5, color=color)
+
+        axes[i,1].imshow(x_images[idx])
+        axes[i,1].imshow(x_masks[idx], cmap='jet', alpha=0.2)
+        axes[i,1].set_title("True Mask", fontsize=20)
+        axes[i,1].axis('off')
+
+        axes[i,2].imshow(x_images[idx])
+        axes[i,2].imshow(msk_pred[idx], cmap='jet', alpha=0.2)
+
+        axes[i,2].set_title("Predicted Mask", fontsize=20)
+        axes[i,2].axis('off')
+        display, save = exp.output_mode
+
+    if save:
+        pred_mask_path = os.path.join(exp.exp_path, 'fig' , "prediction_mask.png")
+        plt.savefig(pred_mask_path)
+
+    # Show the figure
+    if display:
+        plt.tight_layout()
+        plt.show()
+    plt.close()

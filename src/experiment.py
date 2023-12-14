@@ -174,7 +174,8 @@ class Experiment:
         def get_metric_loss():
             task_mapping = {
                 'multitask': {
-                    'lossFunc': {'cls_label': weighted_categorical_crossentropy(list(self.train_class_weights.values())), 'seg_mask': dice_coef_loss},
+                    # 'lossFunc': {'cls_label': weighted_categorical_crossentropy(list(self.train_class_weights.values())), 'seg_mask': dice_coef_loss},
+                    'lossFunc': {'cls_label': categorical_crossentropy, 'seg_mask': dice_coef_loss},
                     'lossWeights': {'cls_label': 0.5, 'seg_mask': 1},
                     'metrics': {'cls_label': 'accuracy', 'seg_mask': [dice_coef, iou, tversky]}
                 },
@@ -244,7 +245,7 @@ class Experiment:
         verbose, _ = self.output_mode
 
         # callbacks
-        # tensorboard = TensorBoard(log_dir=tensorboard_path, histogram_freq=1)
+        # tensorboard = TensorBoard(log_dir=tensorboard_path, histogram_freq=1)
         # backup = BackupAndRestore(backup_dir=bck_path)
         checkpoint = ModelCheckpoint(ckpt_filename, monitor='val_loss', save_weights_only=True, save_best_only=True, verbose=verbose)
         early_stop = EarlyStopping(monitor='val_loss', patience=15, verbose=verbose)
@@ -252,9 +253,6 @@ class Experiment:
 
         # build callbacks list
         callbacks = [checkpoint, early_stop, reduce_lr]
-        if self.task != 'classification':
-            display_call = DisplayCallback(self.task, self.base_path, model, epoch_interval=gradcam_freq)
-            callbacks.append(display_call)
         
         # compute train and val steps per epoch
         train_steps = self.dataset.frame_counts['train'] // batch_size
@@ -281,6 +279,9 @@ class Experiment:
                 verbose = 1
             )
         else:
+            display_call = DisplayCallback(self.task, self.base_path, self.exp_path, model, epoch_interval=gradcam_freq, output_mode=self.output_mode)
+            callbacks.append(display_call)
+            
             history = model.fit(
                 self.x_train,
                 epochs              = epochs,
@@ -312,17 +313,17 @@ class Experiment:
                 plot_train_history(self.name, history, metrics_keys_seg, save_path, self.output_mode)
             if metrics_keys_cls:
                 plot_train_history(self.name, history, metrics_keys_cls, save_path, self.output_mode)
-        elif task == 'classification':
+        elif task == 'segmentation':
             metrics_keys_seg = [key for key in history_keys if((key not in loss_key) and ('val' not in key) and ('lr' not in key))]
             plot_train_history(self.name, history, metrics_keys_seg, save_path, self.output_mode)
-        elif task == 'segmentation':
+        elif task == 'classification':
             plot_train_history(self.name, history, ['accuracy'], save_path, self.output_mode)
 
         if 'lr' in history_keys:
             plot_train_history(self.name, history, ['lr'], save_path, self.output_mode)
 
     def evaluation_model(self, model):
-        model_path = f"{self.exp_path}/checkpoint/best.h5"
+        model_path = f"{self.exp_path}/weights/best_weights.h5"
 
         if os.path.exists(model_path):
             print("Loading best weights")
@@ -366,9 +367,14 @@ class Experiment:
             use_multiprocessing = False
         )
 
-        if len(y_pred.shape) > 1:
-            y_pred = tf.argmax(y_pred, axis=-1)
+        if self.task != 'classification':
+            display_prediction_mask(self, y_pred)
+            if len(y_pred[0].shape) > 1:
+                y_pred = tf.argmax(y_pred[0], axis=-1)
+            else:
+                y_pred = y_pred[0]
 
-        confusionmatrix(self, self.y_test, y_pred)
+        if self.task != 'segmentation':
+            confusionmatrix(self, self.y_test, y_pred)
 
         return evaluate
