@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Path to your files
-file_python="./src/setting_exp.py"
+file_python="./src/run_exp.py"
 file_param="./config/experiments.json"
 
 # Experiments folder
@@ -38,10 +38,11 @@ if [ "$#" -ge 1 ]; then
 
             # Execute the Python file with the specified or default parameters
             if [ -e "$file_python" ]; then
-                if [ "$#" -ge 3 ] && [ "$3" == "isEval" ]; then
-                    python3 "$file_python" --exps_json "$file_param" --idx_exp "$idx_exp" --isEval
-                fi 
-                python3 "$file_python" --exps_json "$file_param" --idx_exp "$idx_exp"
+                if [ "$#" -ge 3 ] && [ "$3" == "grid" ]; then
+                    python3 "$file_python" --exps_json "$file_param" --idx_exp "$idx_exp" --grid 
+                else
+                    python3 "$file_python" --exps_json "$file_param" --idx_exp "$idx_exp"
+                fi
             else
                 echo "ERROR: The Python file does not exist - $file_python"
             fi

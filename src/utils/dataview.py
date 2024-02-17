@@ -5,6 +5,7 @@ import seaborn as sns
 import matplotlib.pyplot as plt
 import tensorflow as tf
 from sklearn.metrics import confusion_matrix
+from scipy import ndimage
 
 # ---- GRAPH GENERATION ----
 def plot_charts(exp, charts, display, save, save_path):
@@ -193,9 +194,30 @@ def _print_seg(batch, batch_size):
     _, axes = plt.subplots(batch_size // size_grid, size_grid, figsize=(20, 3 * (batch_size // 8)))
     frames, masks = batch
     for i, (frame, mask) in enumerate(zip(frames, masks)):        
-        axes[i // size_grid, i % size_grid].imshow(frame)
-        axes[i // size_grid, i % size_grid].imshow(mask, cmap='jet', alpha=0.2)
+        # axes[i // size_grid, i % size_grid].imshow(frame)
+        axes[i // size_grid, i % size_grid].imshow(mask)
+        # axes[i // size_grid, i % size_grid].imshow(mask, cmap='jet', alpha=0.2)
         axes[i // size_grid, i % size_grid].axis('off')
+
+def _get_edge_mask(mask):
+    mask_numpy = mask.numpy().squeeze()
+    # Applicare l'operatore Sobel per ottenere i bordi
+    sobel_x = ndimage.sobel(mask_numpy, axis=0, mode='constant')
+    sobel_y = ndimage.sobel(mask_numpy, axis=1, mode='constant')
+    edge_mask = np.hypot(sobel_x, sobel_y)
+
+    # Sogliatura per ottenere una maschera binaria dei bordi
+    edge_mask_binary = (edge_mask > 0).astype(int)
+    return edge_mask_binary
+
+def _get_RGB_mask_color(target_array):
+    color_mapping = {
+        0 : [0, 255, 0],
+        1 : [0, 0, 255],
+        2 : [253, 253, 0],
+        3 : [255,0,0],
+    }
+    return color_mapping.get(target_array, 'black')
 
 def _print_multi(batch, batch_size):
     size_grid = batch_size//2
@@ -206,11 +228,15 @@ def _print_multi(batch, batch_size):
     labels, masks = Y
     
     for i, (frame, label, mask) in enumerate(zip(frames, labels, masks)):        
-        axes[i // size_grid, i % size_grid].imshow(frame)
-        axes[i // size_grid, i % size_grid].imshow(mask, cmap='jet', alpha=0.2)
+        # axes[i // size_grid, i % size_grid].imshow(frame)
+        # axes[i // size_grid, i % size_grid].imshow(mask, cmap='jet', alpha=0.2)
+        mask_edge = _get_edge_mask(mask)
+        composite_image = np.copy(frame)
+        composite_image[mask_edge != 0] = _get_RGB_mask_color(np.argmax(label))
+        axes[i // size_grid, i % size_grid].imshow(composite_image)
 
         color = class_colors.get(np.argmax(label), 'black')
-        axes[i // size_grid, i % size_grid].set_title(f'Target: {label}', color=color)
+        axes[i // size_grid, i % size_grid].set_title(f'Target: {np.argmax(label)}', color=color)
         axes[i // size_grid, i % size_grid].axis('off')
 
 

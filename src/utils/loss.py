@@ -57,4 +57,63 @@ def weighted_categorical_crossentropy(weights):
         return loss
     
     return loss
+
+
+def categorical_focal_loss(gamma=2., alpha=.25):
+    """
+    Implementation of the categorical focal loss as described in the provided formula.
+    This loss function is a modified version of the categorical crossentropy that adds
+    a modulating factor to focus on hard-to-classify examples.
+    """
+    def focal_loss_fixed(y_true, y_pred):
+        # Clip the prediction value to prevent NaN's and Inf's
+        epsilon = K.epsilon()
+        y_pred = K.clip(y_pred, epsilon, 1. - epsilon)
+
+        # Calculate the cross entropy
+        cross_entropy = -y_true * K.log(y_pred)
+
+        # Calculate the weight that focuses on hard-to-classify examples
+        loss = alpha * K.pow(1 - y_pred, gamma) * cross_entropy
+
+        # Reduce the loss to a single scalar
+        return K.sum(loss, axis=-1)
+    
+    return focal_loss_fixed
+
+
+def categorical_focal_loss_with_fixed_weights(weights, gamma=2.0):
+    """
+    Focal loss function for multi-class classification with fixed class weights.
+
+    Arguments:
+    weights -- list of weights for each class
+    gamma -- focusing parameter for modulating factor (1-p)
+    """
+    # Convert weights to a tensor
+    class_weights = K.variable(weights)
+
+    def focal_loss_fixed(y_true, y_pred):
+        """
+        Focal loss for multi-class classification.
+
+        Arguments:
+        y_true -- true labels, one-hot encoded
+        y_pred -- predicted labels
+        """
+        # Scale predictions so that the class probabilities of each sample sum to 1
+        y_pred /= K.sum(y_pred, axis=-1, keepdims=True)
+        # Clip the prediction value to prevent NaN's and Inf's
+        epsilon = K.epsilon()
+        y_pred = K.clip(y_pred, epsilon, 1. - epsilon)
+        # Calculate the cross entropy
+        cross_entropy = -y_true * K.log(y_pred)
+        # Calculate the weight that focuses on hard-to-classify examples
+        loss = K.pow(1 - y_pred, gamma) * cross_entropy
+        # Apply class weights
+        loss = loss * class_weights
+        # Reduce the loss to a single scalar
+        return K.sum(loss, axis=-1)
+    
+    return focal_loss_fixed
 # ------------------------------------------------------------------------------------------------

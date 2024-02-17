@@ -15,19 +15,22 @@ from utils.dataview import *
 
 from utils.DisplayCallback import DisplayCallback
 
-from keras.optimizers.legacy import Adam, SGD
+from keras.optimizers import Adam, SGD
+# from keras.optimizers.legacy import Adam, SGD
+
 from utils.dataset import DatasetHandler
 
 class Experiment:
-    def __init__(self, base_path, exp_name, force_split = False, output_mode = (False, True)):
-        self.name = None
-        self.output_mode = output_mode # (verbose,save)
-        self.base_path = base_path
-        self.exp_name  = exp_name
-        self.exp_path  = None
-        self.force_split = force_split
-        self.dataset_dir = None
-        self.task = None
+    def __init__(self, base_path, exps_name, output_mode = (False, True)):
+        self.name      = None           # Nome del singolo esperimento
+        self.exps_name = exps_name      # Nome della cartella del gruppo degli esperimenti
+        self.i_exp     = None
+
+        self.output_mode = output_mode  # modalità dell'esperimento, se si vuole visualizzare o salvare (verbose,save)
+
+        self.base_path   = base_path    # Path del progetto
+        self.exp_path    = None         # Path del singolo esperimento
+        self.dataset_dir = None         # Path del dataset
 
         self.seed, self.n_class, self.img_shape = (
             None,
@@ -35,6 +38,7 @@ class Experiment:
             None,
         )
         self.exp_config = None
+        self.task = None
 
         self.dataset = None
         self.x_train, self.x_val, self.x_test, = (
@@ -49,15 +53,17 @@ class Experiment:
         )
         self.train_class_weights = None
 
+        self.workers   = 1          # fit parameter
+        self.max_qsize = 100
+
     def get_exp_name(self):
         if 'name' in self.exp_config:
             self.name = self.exp_config['name']
         else:
             weights  = self.exp_config.get('weights', None)
-            model_name = "{}_{}_{}".format(
+            model_name = "{}_{}".format(
                     self.task,
-                    self.exp_config['backbone'],
-                    self.exp_config.get('type', '18')
+                    self.exp_config['backbone']
                 )
             if weights is not None:
                 model_name = model_name + "_" + weights
@@ -73,7 +79,8 @@ class Experiment:
                 self.exp_config.get('dil_rate', 1)
                 )
 
-    def build(self, setting, exp_config):
+    # def build(self, setting, exp_config):
+    def build(self, setting, exp_config, i_exp):
         self.seed, self.n_class, self.img_shape = (
             setting['SEED'],
             setting['N_CLASS'],
@@ -81,16 +88,19 @@ class Experiment:
         )
         self.exp_config = exp_config
         self.task = exp_config['task']
+        self.i_exp = i_exp
 
         self.get_exp_name()
 
         print('\n')
         print("-"*90)
-        print(f">> EXPERIMENT: {self.name} <<")
+        print(f">> EXPERIMENT {i_exp}: {self.name} <<")
         print("-"*90)
 
-        self.exp_path    = os.path.join(self.base_path, 'exp', self.exp_name, self.name)
+        self.exp_path    = os.path.join(self.base_path, 'exp', self.exps_name, f"{i_exp}_{self.name}")
         self.dataset_dir = os.path.join(self.base_path, 'dataset/TFRecords')
+        if self.exp_config.get('out_class_seg', 1) == 4:
+            self.dataset_dir = self.dataset_dir + '-multiclass'
 
         os.makedirs(self.exp_path + '/fig', exist_ok=True)
 
@@ -99,10 +109,12 @@ class Experiment:
             writer.writerow(self.exp_config.keys())
             writer.writerow(self.exp_config.values())
         
-        self.load_dataset()
+        if self.dataset is None:
+            self.load_dataset()
 
     def load_dataset(self):
-        shuffle_bsize = 1000 # TODO: ricontrolla
+        # shuffle_bsize = 2154
+        shuffle_bsize = 100
 
         self.dataset = DatasetHandler(self.dataset_dir,
                                       shuffle_bsize = shuffle_bsize,
@@ -172,26 +184,30 @@ class Experiment:
 
     def compile_model(self, model):
         def get_metric_loss():
+            gamma = 0.5
             task_mapping = {
                 'multitask': {
-                    # 'lossFunc': {'cls_label': weighted_categorical_crossentropy(list(self.train_class_weights.values())), 'seg_mask': dice_coef_loss},
-                    'lossFunc': {'cls_label': categorical_crossentropy, 'seg_mask': dice_coef_loss},
-                    'lossWeights': {'cls_label': 0.5, 'seg_mask': 1},
-                    'metrics': {'cls_label': 'accuracy', 'seg_mask': [dice_coef, iou, tversky]}
+                    'lossFunc': {'cls_label': categorical_focal_loss_with_fixed_weights(list(self.train_class_weights.values()), gamma=2.0), 'seg_mask': dice_coef_loss},
+                    #'lossFunc': {'cls_label': categorical_crossentropy, 'seg_mask': dice_coef_loss},
+                    #'lossWeights': {'cls_label': gamma, 'seg_mask': 1-gamma},
+                    'lossWeights': {'cls_label': 1, 'seg_mask': 1},
+                    'metrics': {'cls_label': 'accuracy', 'seg_mask': ['accuracy', dice_coef]}
                 },
                 'segmentation': {
                     'lossFunc': dice_coef_loss,
                     'lossWeights': 1,
-                    'metrics': [dice_coef, iou, tversky]
+                    'metrics': ['accuracy', dice_coef]
                 },
                 'classification': {
                     #'lossFunc': weighted_categorical_crossentropy(list(self.train_class_weights.values())),
-                    'lossFunc': categorical_crossentropy,
+                    #'lossFunc': categorical_crossentropy,categorical_focal_loss
+                    #'lossFunc': categorical_focal_loss(gamma=2., alpha=.25),
+                    'lossFunc': categorical_focal_loss_with_fixed_weights(list(self.train_class_weights.values()), gamma=2.0),
                     'lossWeights': 1,
                     'metrics': 'accuracy'
                 }
             }
-
+            
             if self.task in task_mapping:
                 task_settings = task_mapping[self.task]
                 lossFunc = task_settings.get('lossFunc', None)
@@ -217,6 +233,25 @@ class Experiment:
 
         loss_f, loss_w, metrics = get_metric_loss()
 
+        if self.task == 'multitask':
+            if self.i_exp == 1 or self.i_exp == 6 or self.i_exp == 11 or self.i_exp == 16:
+                gamma = 0
+            elif self.i_exp == 2 or self.i_exp == 7 or self.i_exp == 12 or self.i_exp == 17:
+                gamma = 0.25
+            elif self.i_exp == 3 or self.i_exp == 8 or self.i_exp == 13 or self.i_exp == 18:
+                gamma = 0.5
+            elif self.i_exp == 4 or self.i_exp == 9 or self.i_exp == 14 or self.i_exp == 19:
+                gamma = 0.75
+            elif self.i_exp == 5 or self.i_exp == 10 or self.i_exp == 15 or self.i_exp == 20:
+                gamma = 1
+
+            if self.i_exp == 21 or self.i_exp == 22 or self.i_exp == 23 or self.i_exp == 24:
+                loss_w = {'cls_label': 1, 'seg_mask': 1}
+            else:
+                loss_w = {'cls_label': gamma, 'seg_mask': (1-gamma)}    
+
+        print(loss_w)
+
         model.compile(optimizer    = optimizer,
                       loss         = loss_f,
                       loss_weights = loss_w,
@@ -235,11 +270,9 @@ class Experiment:
         bck_path         = os.path.join(self.exp_path, "backup")
         # tensorboard_path = os.path.join(self.base_path, "exp/", "logs/fit/", self.name)
 
-        if not os.path.exists(ckpt_filename):
-            os.makedirs(ckpt_filename)
-        if not os.path.exists(bck_path):
-            os.makedirs(bck_path)
-            
+        os.makedirs(ckpt_filename, exist_ok=True)
+        os.makedirs(bck_path, exist_ok=True)
+
         ckpt_filename = os.path.join(ckpt_filename, "best_weights.h5")
 
         verbose, _ = self.output_mode
@@ -273,7 +306,8 @@ class Experiment:
                 class_weight        = self.train_class_weights,
                 validation_steps    = val_steps,
                 callbacks           = callbacks,
-                workers             = 8,
+                max_queue_size      = self.max_qsize,
+                workers             = self.workers,
                 use_multiprocessing = False,
                 # verbose             = verbose
                 verbose = 1
@@ -289,7 +323,8 @@ class Experiment:
                 validation_data     = self.x_val,
                 validation_steps    = val_steps,
                 callbacks           = callbacks,
-                workers             = 8,
+                max_queue_size      = self.max_qsize,
+                workers             = self.workers,
                 use_multiprocessing = False,
                 # verbose             = verbose
             )
@@ -351,7 +386,7 @@ class Experiment:
         )
 
         df = pd.DataFrame([evaluate])
-        df.to_csv(f'{self.exp_path}/eval_results.csv', index=False)
+        df.to_csv(f'{self.base_path}/exp/{self.exps_name}/eval_result/{self.i_exp}-{self.name}.csv', index=False, sep=';', decimal=',')
         
         print('\n')
         print("-"*60)
@@ -375,6 +410,8 @@ class Experiment:
                 y_pred = y_pred[0]
 
         if self.task != 'segmentation':
+            if len(y_pred.shape) > 1:
+                y_pred = tf.argmax(y_pred, axis=-1)
             confusionmatrix(self, self.y_test, y_pred)
 
         return evaluate

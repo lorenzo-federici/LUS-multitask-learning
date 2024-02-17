@@ -12,13 +12,15 @@ WEIGHTS_PATH_NO_TOP_18 = 'https://github.com/qubvel/classification_models/releas
 
 class ResNet():
     def __init__(self, input_shape= (224,224,3), model = 'resnet18', weights=None, layer_to_freeze=None, num_class=4, dropout=.0, dil_rate = 1):
-        self.input_shape = input_shape
-        self.model = model
-        self.weights = weights
-        self.layer_to_freeze = layer_to_freeze
-        self.num_class = num_class
-        self.dropout = dropout
-        self.dil_rate = dil_rate
+        self.input_shape     = input_shape
+        self.model           = model
+        self.weights         = None if weights == 'none' else weights
+        self.layer_to_freeze = None if layer_to_freeze == 'none' else layer_to_freeze
+        self.num_class       = num_class
+        self.dropout         = dropout
+        self.dil_rate        = dil_rate
+
+        self.start_neurons   = 4
     
     def __call__(self):
         if self.model == 'resnet18':
@@ -54,20 +56,22 @@ class ResNet():
 
         input = Input(shape=self.input_shape)
 
-        x = Conv2D(64, strides=2, kernel_size=(7, 7), 
+        start_neurons = self.start_neurons * 2
+
+        x = Conv2D(start_neurons * 2, strides=2, kernel_size=(7, 7), 
                     padding='same', kernel_initializer='he_normal')(input)
         x = BatchNormalization()(x)
         x = Activation('relu')(x)
         x = MaxPool2D(pool_size=(2, 2), strides=2, padding='same')(x)
 
-        x = _resnet_block(x, 64, dil_rate=self.dil_rate, name='enc_1.0')
-        x = _resnet_block(x, 64, dil_rate=self.dil_rate, name='enc_1')
-        x = _resnet_block(x, 128, dil_rate=self.dil_rate, name='enc_2.0', down_sample=True)
-        x = _resnet_block(x, 128, dil_rate=self.dil_rate, name='enc_2')
-        x = _resnet_block(x, 256, dil_rate=self.dil_rate, name='enc_3.0', down_sample=True)
-        x = _resnet_block(x, 256, dil_rate=self.dil_rate, name='enc_3')
-        x = _resnet_block(x, 512, dil_rate=self.dil_rate, name='enc_4.0', down_sample=True)
-        x = _resnet_block(x, 512, dil_rate=self.dil_rate, name='enc_4')
+        x = _resnet_block(x, start_neurons * 2, dil_rate=self.dil_rate, name='enc_1.0')
+        x = _resnet_block(x, start_neurons * 2, dil_rate=self.dil_rate, name='enc_1')
+        x = _resnet_block(x, start_neurons * 4, dil_rate=self.dil_rate, name='enc_2.0', down_sample=True)
+        x = _resnet_block(x, start_neurons * 4, dil_rate=self.dil_rate, name='enc_2')
+        x = _resnet_block(x, start_neurons * 8, dil_rate=self.dil_rate, name='enc_3.0', down_sample=True)
+        x = _resnet_block(x, start_neurons * 8, dil_rate=self.dil_rate, name='enc_3')
+        x = _resnet_block(x, start_neurons * 16, dil_rate=self.dil_rate, name='enc_4.0', down_sample=True)
+        x = _resnet_block(x, start_neurons * 16, dil_rate=self.dil_rate, name='enc_4')
 
         if self.dropout > .0:
             x = Dropout(rate=self.dropout)(x)

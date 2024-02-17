@@ -7,8 +7,9 @@ from tensorflow.keras.layers import Input, Conv2D, MaxPooling2D, UpSampling2D, C
 
 # from models.resnet18 import resnet18
 from models.resnet import ResNet
+from models.resUnet import ResUnet
 from models.unet import *
-
+from models.unetpp import *
 
 class Network:
     def __init__(self, exp_config, num_classes_seg:int = 1, num_classes_cls:int = 4, input_size:int = 224):
@@ -52,17 +53,35 @@ class Network:
             print(f'\t• Freeze --> {self.layer_to_freeze}')
 
         if self.task == 'multitask':
-            seg_model = UNet(self.input_size, model = self.backbone, weights=self.weights, layer_to_freeze=self.layer_to_freeze, num_class=self.n_class_seg, dropout=self.dropout, dil_rate = self.dil_rate)()
+            seg_model = ResUnet(self.input_size, 
+                                model = self.backbone, 
+                                weights=self.weights, 
+                                layer_to_freeze=self.layer_to_freeze, 
+                                num_class=self.n_class_seg, 
+                                dropout=self.dropout, 
+                                dil_rate = self.dil_rate)()
             cls_model = self.classification_model(seg_model)
 
             output = [cls_model.output, seg_model.output]  # Combine outputs.
             model  = Model(inputs=[seg_model.input], outputs=output, name=f'multitask_{self.model_name}')
         elif self.task == 'segmentation':
-            model = UNet(self.input_size, model = self.backbone, weights=self.weights, layer_to_freeze=self.layer_to_freeze, num_class=self.n_class_seg, dropout=self.dropout, dil_rate = self.dil_rate)()
+            model = ResUnet(self.input_size, 
+                            model = self.backbone, 
+                            weights=self.weights, 
+                            layer_to_freeze=self.layer_to_freeze, 
+                            num_class=self.n_class_seg, 
+                            dropout=self.dropout, 
+                            dil_rate = self.dil_rate)()
         elif self.task == 'classification':
-            model = ResNet(self.input_size, model = self.backbone, weights=self.weights, layer_to_freeze=self.layer_to_freeze, num_class=self.n_class_cls, dropout=self.dropout, dil_rate = self.dil_rate)()     
+            model = ResNet(self.input_size, 
+                           model = self.backbone, 
+                           weights=self.weights, 
+                           layer_to_freeze=self.layer_to_freeze, 
+                           num_class=self.n_class_cls, 
+                           dropout=self.dropout, 
+                           dil_rate = self.dil_rate)()     
         
-        return model    
+        return model
     
     def classification_model(self, base_model):
         '''Classificator model'''
@@ -83,9 +102,10 @@ class Network:
         x = Dense(256, activation='relu')(x)
         if self.dropout > .0:
             x = Dropout(rate=self.dropout)(x)
-        x = Dense(128, activation='relu')(x)
-        if self.dropout > .0:
-            x = Dropout(rate=self.dropout)(x)
+
+        # x = Dense(128, activation='relu', name='last')(x)
+        # if self.dropout > .0:
+        #     x = Dropout(rate=self.dropout)(x)
             
         output = Dense(self.n_class_cls, activation='softmax', name='cls_label')(x)
 

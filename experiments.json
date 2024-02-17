@@ -1,0 +1,137 @@
+{
+    "SETTING": {
+        "IMG_SHAPE": 224,
+        "N_CLASS": 4,
+        "SEED": 24
+    },
+    "GRID": [
+        [
+            {"backbone": "resnet50pp", "task": "multitask", "out_class_cls": 4, "out_class_seg": 1, "tuner": "bayesian", "batch_size": 16, "epoch": 20, "split_ratio": [0.6, 0.2, 0.2], "optimizer": "Adam", "augmentation": true}
+        ]
+    ],
+    "EXPS": [
+        [
+            {"backbone": "resnet18", "task": "classification", "out_class_cls": 4, "out_class_seg": 1, "batch_size": 4, "epoch": 1, "split_ratio": [0.6, 0.2, 0.2], "optimizer": "Adam", "lr": 0.001, "augmentation": true}
+        ],
+        [
+            {"backbone": "resnet18", "task": "multitask", "out_class_cls": 4, "out_class_seg": 1, "batch_size": 4, "epoch": 30, "split_ratio": [0.6, 0.2, 0.2], "optimizer": "Adam", "lr": 0.001, "augmentation": true},
+            {"backbone": "resnet18", "task": "multitask", "out_class_cls": 4, "out_class_seg": 1, "batch_size": 8, "epoch": 30, "split_ratio": [0.6, 0.2, 0.2], "optimizer": "Adam", "lr": 0.001, "augmentation": true},
+            {"backbone": "resnet18", "task": "multitask", "out_class_cls": 4, "out_class_seg": 1, "batch_size": 16, "epoch": 30, "split_ratio": [0.6, 0.2, 0.2], "optimizer": "Adam", "lr": 0.001, "augmentation": true},
+
+            {"backbone": "resnet18", "task": "multitask", "out_class_cls": 4, "out_class_seg": 1, "batch_size": 4, "epoch": 30, "split_ratio": [0.6, 0.2, 0.2], "optimizer": "Adam", "lr": 0.001, "augmentation": true, "weights": "imagenet"},
+            {"backbone": "resnet18", "task": "multitask", "out_class_cls": 4, "out_class_seg": 1, "batch_size": 8, "epoch": 30, "split_ratio": [0.6, 0.2, 0.2], "optimizer": "Adam", "lr": 0.001, "augmentation": true, "weights": "imagenet"},
+            {"backbone": "resnet18", "task": "multitask", "out_class_cls": 4, "out_class_seg": 1, "batch_size": 16, "epoch": 30, "split_ratio": [0.6, 0.2, 0.2], "optimizer": "Adam", "lr": 0.001, "augmentation": true, "weights": "imagenet"},
+            
+            {"backbone": "resnet18", "task": "multitask", "out_class_cls": 4, "out_class_seg": 1, "batch_size": 4, "epoch": 30, "split_ratio": [0.6, 0.2, 0.2], "optimizer": "Adam", "lr": 0.001, "augmentation": true, "dropout": 0.1},
+            {"backbone": "resnet18", "task": "multitask", "out_class_cls": 4, "out_class_seg": 1, "batch_size": 4, "epoch": 30, "split_ratio": [0.6, 0.2, 0.2], "optimizer": "Adam", "lr": 0.001, "augmentation": true, "dropout": 0.2},
+            {"backbone": "resnet18", "task": "multitask", "out_class_cls": 4, "out_class_seg": 1, "batch_size": 4, "epoch": 30, "split_ratio": [0.6, 0.2, 0.2], "optimizer": "Adam", "lr": 0.001, "augmentation": true, "dropout": 0.3},
+            {"backbone": "resnet18", "task": "multitask", "out_class_cls": 4, "out_class_seg": 1, "batch_size": 8, "epoch": 30, "split_ratio": [0.6, 0.2, 0.2], "optimizer": "Adam", "lr": 0.001, "augmentation": true, "dropout": 0.1},
+            {"backbone": "resnet18", "task": "multitask", "out_class_cls": 4, "out_class_seg": 1, "batch_size": 8, "epoch": 30, "split_ratio": [0.6, 0.2, 0.2], "optimizer": "Adam", "lr": 0.001, "augmentation": true, "dropout": 0.2},
+            {"backbone": "resnet18", "task": "multitask", "out_class_cls": 4, "out_class_seg": 1, "batch_size": 8, "epoch": 30, "split_ratio": [0.6, 0.2, 0.2], "optimizer": "Adam", "lr": 0.001, "augmentation": true, "dropout": 0.3},
+            {"backbone": "resnet18", "task": "multitask", "out_class_cls": 4, "out_class_seg": 1, "batch_size": 16, "epoch": 30, "split_ratio": [0.6, 0.2, 0.2], "optimizer": "Adam", "lr": 0.001, "augmentation": true, "dropout": 0.1},
+            {"backbone": "resnet18", "task": "multitask", "out_class_cls": 4, "out_class_seg": 1, "batch_size": 16, "epoch": 30, "split_ratio": [0.6, 0.2, 0.2], "optimizer": "Adam", "lr": 0.001, "augmentation": true, "dropout": 0.2},
+            {"backbone": "resnet18", "task": "multitask", "out_class_cls": 4, "out_class_seg": 1, "batch_size": 16, "epoch": 30, "split_ratio": [0.6, 0.2, 0.2], "optimizer": "Adam", "lr": 0.001, "augmentation": true, "dropout": 0.3},
+
+            {"backbone": "resnet18", "task": "multitask", "out_class_cls": 4, "out_class_seg": 1, "batch_size": 4, "epoch": 30, "split_ratio": [0.6, 0.2, 0.2], "optimizer": "Adam", "lr": 0.001, "augmentation": true, "dropout": 0.1, "weights": "imagenet"},
+            {"backbone": "resnet18", "task": "multitask", "out_class_cls": 4, "out_class_seg": 1, "batch_size": 4, "epoch": 30, "split_ratio": [0.6, 0.2, 0.2], "optimizer": "Adam", "lr": 0.001, "augmentation": true, "dropout": 0.2, "weights": "imagenet"},
+            {"backbone": "resnet18", "task": "multitask", "out_class_cls": 4, "out_class_seg": 1, "batch_size": 4, "epoch": 30, "split_ratio": [0.6, 0.2, 0.2], "optimizer": "Adam", "lr": 0.001, "augmentation": true, "dropout": 0.3, "weights": "imagenet"},
+            {"backbone": "resnet18", "task": "multitask", "out_class_cls": 4, "out_class_seg": 1, "batch_size": 8, "epoch": 30, "split_ratio": [0.6, 0.2, 0.2], "optimizer": "Adam", "lr": 0.001, "augmentation": true, "dropout": 0.1, "weights": "imagenet"},
+            {"backbone": "resnet18", "task": "multitask", "out_class_cls": 4, "out_class_seg": 1, "batch_size": 8, "epoch": 30, "split_ratio": [0.6, 0.2, 0.2], "optimizer": "Adam", "lr": 0.001, "augmentation": true, "dropout": 0.2, "weights": "imagenet"},
+            {"backbone": "resnet18", "task": "multitask", "out_class_cls": 4, "out_class_seg": 1, "batch_size": 8, "epoch": 30, "split_ratio": [0.6, 0.2, 0.2], "optimizer": "Adam", "lr": 0.001, "augmentation": true, "dropout": 0.3, "weights": "imagenet"},
+            {"backbone": "resnet18", "task": "multitask", "out_class_cls": 4, "out_class_seg": 1, "batch_size": 16, "epoch": 30, "split_ratio": [0.6, 0.2, 0.2], "optimizer": "Adam", "lr": 0.001, "augmentation": true, "dropout": 0.1, "weights": "imagenet"},
+            {"backbone": "resnet18", "task": "multitask", "out_class_cls": 4, "out_class_seg": 1, "batch_size": 16, "epoch": 30, "split_ratio": [0.6, 0.2, 0.2], "optimizer": "Adam", "lr": 0.001, "augmentation": true, "dropout": 0.2, "weights": "imagenet"},
+            {"backbone": "resnet18", "task": "multitask", "out_class_cls": 4, "out_class_seg": 1, "batch_size": 16, "epoch": 30, "split_ratio": [0.6, 0.2, 0.2], "optimizer": "Adam", "lr": 0.001, "augmentation": true, "dropout": 0.3, "weights": "imagenet"},
+
+            
+            {"backbone": "resnet18pp", "task": "multitask", "out_class_cls": 4, "out_class_seg": 1, "batch_size": 4, "epoch": 30, "split_ratio": [0.6, 0.2, 0.2], "optimizer": "Adam", "lr": 0.001, "augmentation": true},
+            {"backbone": "resnet18pp", "task": "multitask", "out_class_cls": 4, "out_class_seg": 1, "batch_size": 8, "epoch": 30, "split_ratio": [0.6, 0.2, 0.2], "optimizer": "Adam", "lr": 0.001, "augmentation": true},
+            {"backbone": "resnet18pp", "task": "multitask", "out_class_cls": 4, "out_class_seg": 1, "batch_size": 16, "epoch": 30, "split_ratio": [0.6, 0.2, 0.2], "optimizer": "Adam", "lr": 0.001, "augmentation": true},
+
+            {"backbone": "resnet18pp", "task": "multitask", "out_class_cls": 4, "out_class_seg": 1, "batch_size": 4, "epoch": 30, "split_ratio": [0.6, 0.2, 0.2], "optimizer": "Adam", "lr": 0.001, "augmentation": true, "weights": "imagenet"},
+            {"backbone": "resnet18pp", "task": "multitask", "out_class_cls": 4, "out_class_seg": 1, "batch_size": 8, "epoch": 30, "split_ratio": [0.6, 0.2, 0.2], "optimizer": "Adam", "lr": 0.001, "augmentation": true, "weights": "imagenet"},
+            {"backbone": "resnet18pp", "task": "multitask", "out_class_cls": 4, "out_class_seg": 1, "batch_size": 16, "epoch": 30, "split_ratio": [0.6, 0.2, 0.2], "optimizer": "Adam", "lr": 0.001, "augmentation": true, "weights": "imagenet"},
+            
+            {"backbone": "resnet18pp", "task": "multitask", "out_class_cls": 4, "out_class_seg": 1, "batch_size": 4, "epoch": 30, "split_ratio": [0.6, 0.2, 0.2], "optimizer": "Adam", "lr": 0.001, "augmentation": true, "dropout": 0.1},
+            {"backbone": "resnet18pp", "task": "multitask", "out_class_cls": 4, "out_class_seg": 1, "batch_size": 4, "epoch": 30, "split_ratio": [0.6, 0.2, 0.2], "optimizer": "Adam", "lr": 0.001, "augmentation": true, "dropout": 0.2},
+            {"backbone": "resnet18pp", "task": "multitask", "out_class_cls": 4, "out_class_seg": 1, "batch_size": 4, "epoch": 30, "split_ratio": [0.6, 0.2, 0.2], "optimizer": "Adam", "lr": 0.001, "augmentation": true, "dropout": 0.3},
+            {"backbone": "resnet18pp", "task": "multitask", "out_class_cls": 4, "out_class_seg": 1, "batch_size": 8, "epoch": 30, "split_ratio": [0.6, 0.2, 0.2], "optimizer": "Adam", "lr": 0.001, "augmentation": true, "dropout": 0.1},
+            {"backbone": "resnet18pp", "task": "multitask", "out_class_cls": 4, "out_class_seg": 1, "batch_size": 8, "epoch": 30, "split_ratio": [0.6, 0.2, 0.2], "optimizer": "Adam", "lr": 0.001, "augmentation": true, "dropout": 0.2},
+            {"backbone": "resnet18pp", "task": "multitask", "out_class_cls": 4, "out_class_seg": 1, "batch_size": 8, "epoch": 30, "split_ratio": [0.6, 0.2, 0.2], "optimizer": "Adam", "lr": 0.001, "augmentation": true, "dropout": 0.3},
+            {"backbone": "resnet18pp", "task": "multitask", "out_class_cls": 4, "out_class_seg": 1, "batch_size": 16, "epoch": 30, "split_ratio": [0.6, 0.2, 0.2], "optimizer": "Adam", "lr": 0.001, "augmentation": true, "dropout": 0.1},
+            {"backbone": "resnet18pp", "task": "multitask", "out_class_cls": 4, "out_class_seg": 1, "batch_size": 16, "epoch": 30, "split_ratio": [0.6, 0.2, 0.2], "optimizer": "Adam", "lr": 0.001, "augmentation": true, "dropout": 0.2},
+            {"backbone": "resnet18pp", "task": "multitask", "out_class_cls": 4, "out_class_seg": 1, "batch_size": 16, "epoch": 30, "split_ratio": [0.6, 0.2, 0.2], "optimizer": "Adam", "lr": 0.001, "augmentation": true, "dropout": 0.3},
+
+            {"backbone": "resnet18pp", "task": "multitask", "out_class_cls": 4, "out_class_seg": 1, "batch_size": 4, "epoch": 30, "split_ratio": [0.6, 0.2, 0.2], "optimizer": "Adam", "lr": 0.001, "augmentation": true, "dropout": 0.1, "weights": "imagenet"},
+            {"backbone": "resnet18pp", "task": "multitask", "out_class_cls": 4, "out_class_seg": 1, "batch_size": 4, "epoch": 30, "split_ratio": [0.6, 0.2, 0.2], "optimizer": "Adam", "lr": 0.001, "augmentation": true, "dropout": 0.2, "weights": "imagenet"},
+            {"backbone": "resnet18pp", "task": "multitask", "out_class_cls": 4, "out_class_seg": 1, "batch_size": 4, "epoch": 30, "split_ratio": [0.6, 0.2, 0.2], "optimizer": "Adam", "lr": 0.001, "augmentation": true, "dropout": 0.3, "weights": "imagenet"},
+            {"backbone": "resnet18pp", "task": "multitask", "out_class_cls": 4, "out_class_seg": 1, "batch_size": 8, "epoch": 30, "split_ratio": [0.6, 0.2, 0.2], "optimizer": "Adam", "lr": 0.001, "augmentation": true, "dropout": 0.1, "weights": "imagenet"},
+            {"backbone": "resnet18pp", "task": "multitask", "out_class_cls": 4, "out_class_seg": 1, "batch_size": 8, "epoch": 30, "split_ratio": [0.6, 0.2, 0.2], "optimizer": "Adam", "lr": 0.001, "augmentation": true, "dropout": 0.2, "weights": "imagenet"},
+            {"backbone": "resnet18pp", "task": "multitask", "out_class_cls": 4, "out_class_seg": 1, "batch_size": 8, "epoch": 30, "split_ratio": [0.6, 0.2, 0.2], "optimizer": "Adam", "lr": 0.001, "augmentation": true, "dropout": 0.3, "weights": "imagenet"},
+            {"backbone": "resnet18pp", "task": "multitask", "out_class_cls": 4, "out_class_seg": 1, "batch_size": 16, "epoch": 30, "split_ratio": [0.6, 0.2, 0.2], "optimizer": "Adam", "lr": 0.001, "augmentation": true, "dropout": 0.1, "weights": "imagenet"},
+            {"backbone": "resnet18pp", "task": "multitask", "out_class_cls": 4, "out_class_seg": 1, "batch_size": 16, "epoch": 30, "split_ratio": [0.6, 0.2, 0.2], "optimizer": "Adam", "lr": 0.001, "augmentation": true, "dropout": 0.2, "weights": "imagenet"},
+            {"backbone": "resnet18pp", "task": "multitask", "out_class_cls": 4, "out_class_seg": 1, "batch_size": 16, "epoch": 30, "split_ratio": [0.6, 0.2, 0.2], "optimizer": "Adam", "lr": 0.001, "augmentation": true, "dropout": 0.3, "weights": "imagenet"}
+
+        ],
+        [
+            {"backbone": "resnet50", "task": "segmentation", "out_class_seg": 1, "batch_size": 4, "epoch": 30, "split_ratio": [0.6, 0.2, 0.2], "optimizer": "Adam", "lr": 0.0001, "augmentation": true},
+            {"backbone": "resnet50", "task": "segmentation", "out_class_seg": 1, "batch_size": 8, "epoch": 30, "split_ratio": [0.6, 0.2, 0.2], "optimizer": "Adam", "lr": 0.0001, "augmentation": true},
+            {"backbone": "resnet50", "task": "segmentation", "out_class_seg": 1, "batch_size": 16, "epoch": 30, "split_ratio": [0.6, 0.2, 0.2], "optimizer": "Adam", "lr": 0.0001, "augmentation": true},
+
+            {"backbone": "resnet50", "task": "segmentation", "out_class_seg": 1, "batch_size": 4, "epoch": 30, "split_ratio": [0.6, 0.2, 0.2], "optimizer": "Adam", "lr": 0.0001, "augmentation": true, "weights": "imagenet"},
+            {"backbone": "resnet50", "task": "segmentation", "out_class_seg": 1, "batch_size": 8, "epoch": 30, "split_ratio": [0.6, 0.2, 0.2], "optimizer": "Adam", "lr": 0.0001, "augmentation": true, "weights": "imagenet"},
+            {"backbone": "resnet50", "task": "segmentation", "out_class_seg": 1, "batch_size": 16, "epoch": 30, "split_ratio": [0.6, 0.2, 0.2], "optimizer": "Adam", "lr": 0.0001, "augmentation": true, "weights": "imagenet"},
+            
+            {"backbone": "resnet50", "task": "segmentation", "out_class_seg": 1, "batch_size": 4, "epoch": 30, "split_ratio": [0.6, 0.2, 0.2], "optimizer": "Adam", "lr": 0.0001, "augmentation": true, "dropout": 0.1},
+            {"backbone": "resnet50", "task": "segmentation", "out_class_seg": 1, "batch_size": 4, "epoch": 30, "split_ratio": [0.6, 0.2, 0.2], "optimizer": "Adam", "lr": 0.0001, "augmentation": true, "dropout": 0.2},
+            {"backbone": "resnet50", "task": "segmentation", "out_class_seg": 1, "batch_size": 4, "epoch": 30, "split_ratio": [0.6, 0.2, 0.2], "optimizer": "Adam", "lr": 0.0001, "augmentation": true, "dropout": 0.3},
+            {"backbone": "resnet50", "task": "segmentation", "out_class_seg": 1, "batch_size": 8, "epoch": 30, "split_ratio": [0.6, 0.2, 0.2], "optimizer": "Adam", "lr": 0.0001, "augmentation": true, "dropout": 0.1},
+            {"backbone": "resnet50", "task": "segmentation", "out_class_seg": 1, "batch_size": 8, "epoch": 30, "split_ratio": [0.6, 0.2, 0.2], "optimizer": "Adam", "lr": 0.0001, "augmentation": true, "dropout": 0.2},
+            {"backbone": "resnet50", "task": "segmentation", "out_class_seg": 1, "batch_size": 8, "epoch": 30, "split_ratio": [0.6, 0.2, 0.2], "optimizer": "Adam", "lr": 0.0001, "augmentation": true, "dropout": 0.3},
+            {"backbone": "resnet50", "task": "segmentation", "out_class_seg": 1, "batch_size": 16, "epoch": 30, "split_ratio": [0.6, 0.2, 0.2], "optimizer": "Adam", "lr": 0.0001, "augmentation": true, "dropout": 0.1},
+            {"backbone": "resnet50", "task": "segmentation", "out_class_seg": 1, "batch_size": 16, "epoch": 30, "split_ratio": [0.6, 0.2, 0.2], "optimizer": "Adam", "lr": 0.0001, "augmentation": true, "dropout": 0.2},
+            {"backbone": "resnet50", "task": "segmentation", "out_class_seg": 1, "batch_size": 16, "epoch": 30, "split_ratio": [0.6, 0.2, 0.2], "optimizer": "Adam", "lr": 0.0001, "augmentation": true, "dropout": 0.3},
+
+            {"backbone": "resnet50", "task": "segmentation", "out_class_seg": 1, "batch_size": 4, "epoch": 30, "split_ratio": [0.6, 0.2, 0.2], "optimizer": "Adam", "lr": 0.0001, "augmentation": true, "dropout": 0.1, "weights": "imagenet"},
+            {"backbone": "resnet50", "task": "segmentation", "out_class_seg": 1, "batch_size": 4, "epoch": 30, "split_ratio": [0.6, 0.2, 0.2], "optimizer": "Adam", "lr": 0.0001, "augmentation": true, "dropout": 0.2, "weights": "imagenet"},
+            {"backbone": "resnet50", "task": "segmentation", "out_class_seg": 1, "batch_size": 4, "epoch": 30, "split_ratio": [0.6, 0.2, 0.2], "optimizer": "Adam", "lr": 0.0001, "augmentation": true, "dropout": 0.3, "weights": "imagenet"},
+            {"backbone": "resnet50", "task": "segmentation", "out_class_seg": 1, "batch_size": 8, "epoch": 30, "split_ratio": [0.6, 0.2, 0.2], "optimizer": "Adam", "lr": 0.0001, "augmentation": true, "dropout": 0.1, "weights": "imagenet"},
+            {"backbone": "resnet50", "task": "segmentation", "out_class_seg": 1, "batch_size": 8, "epoch": 30, "split_ratio": [0.6, 0.2, 0.2], "optimizer": "Adam", "lr": 0.0001, "augmentation": true, "dropout": 0.2, "weights": "imagenet"},
+            {"backbone": "resnet50", "task": "segmentation", "out_class_seg": 1, "batch_size": 8, "epoch": 30, "split_ratio": [0.6, 0.2, 0.2], "optimizer": "Adam", "lr": 0.0001, "augmentation": true, "dropout": 0.3, "weights": "imagenet"},
+            {"backbone": "resnet50", "task": "segmentation", "out_class_seg": 1, "batch_size": 16, "epoch": 30, "split_ratio": [0.6, 0.2, 0.2], "optimizer": "Adam", "lr": 0.0001, "augmentation": true, "dropout": 0.1, "weights": "imagenet"},
+            {"backbone": "resnet50", "task": "segmentation", "out_class_seg": 1, "batch_size": 16, "epoch": 30, "split_ratio": [0.6, 0.2, 0.2], "optimizer": "Adam", "lr": 0.0001, "augmentation": true, "dropout": 0.2, "weights": "imagenet"},
+            {"backbone": "resnet50", "task": "segmentation", "out_class_seg": 1, "batch_size": 16, "epoch": 30, "split_ratio": [0.6, 0.2, 0.2], "optimizer": "Adam", "lr": 0.0001, "augmentation": true, "dropout": 0.3, "weights": "imagenet"}
+        ],
+        [
+            {"backbone": "resnet50pp", "task": "segmentation", "out_class_seg": 1, "batch_size": 4, "epoch": 30, "split_ratio": [0.6, 0.2, 0.2], "optimizer": "Adam", "lr": 0.0001, "augmentation": true},
+            {"backbone": "resnet50pp", "task": "segmentation", "out_class_seg": 1, "batch_size": 8, "epoch": 30, "split_ratio": [0.6, 0.2, 0.2], "optimizer": "Adam", "lr": 0.0001, "augmentation": true},
+            {"backbone": "resnet50pp", "task": "segmentation", "out_class_seg": 1, "batch_size": 16, "epoch": 30, "split_ratio": [0.6, 0.2, 0.2], "optimizer": "Adam", "lr": 0.0001, "augmentation": true},
+
+            {"backbone": "resnet50pp", "task": "segmentation", "out_class_seg": 1, "batch_size": 4, "epoch": 30, "split_ratio": [0.6, 0.2, 0.2], "optimizer": "Adam", "lr": 0.0001, "augmentation": true, "weights": "imagenet"},
+            {"backbone": "resnet50pp", "task": "segmentation", "out_class_seg": 1, "batch_size": 8, "epoch": 30, "split_ratio": [0.6, 0.2, 0.2], "optimizer": "Adam", "lr": 0.0001, "augmentation": true, "weights": "imagenet"},
+            {"backbone": "resnet50pp", "task": "segmentation", "out_class_seg": 1, "batch_size": 16, "epoch": 30, "split_ratio": [0.6, 0.2, 0.2], "optimizer": "Adam", "lr": 0.0001, "augmentation": true, "weights": "imagenet"},
+            
+            {"backbone": "resnet50pp", "task": "segmentation", "out_class_seg": 1, "batch_size": 4, "epoch": 30, "split_ratio": [0.6, 0.2, 0.2], "optimizer": "Adam", "lr": 0.0001, "augmentation": true, "dropout": 0.1},
+            {"backbone": "resnet50pp", "task": "segmentation", "out_class_seg": 1, "batch_size": 4, "epoch": 30, "split_ratio": [0.6, 0.2, 0.2], "optimizer": "Adam", "lr": 0.0001, "augmentation": true, "dropout": 0.2},
+            {"backbone": "resnet50pp", "task": "segmentation", "out_class_seg": 1, "batch_size": 4, "epoch": 30, "split_ratio": [0.6, 0.2, 0.2], "optimizer": "Adam", "lr": 0.0001, "augmentation": true, "dropout": 0.3},
+            {"backbone": "resnet50pp", "task": "segmentation", "out_class_seg": 1, "batch_size": 8, "epoch": 30, "split_ratio": [0.6, 0.2, 0.2], "optimizer": "Adam", "lr": 0.0001, "augmentation": true, "dropout": 0.1},
+            {"backbone": "resnet50pp", "task": "segmentation", "out_class_seg": 1, "batch_size": 8, "epoch": 30, "split_ratio": [0.6, 0.2, 0.2], "optimizer": "Adam", "lr": 0.0001, "augmentation": true, "dropout": 0.2},
+            {"backbone": "resnet50pp", "task": "segmentation", "out_class_seg": 1, "batch_size": 8, "epoch": 30, "split_ratio": [0.6, 0.2, 0.2], "optimizer": "Adam", "lr": 0.0001, "augmentation": true, "dropout": 0.3},
+            {"backbone": "resnet50pp", "task": "segmentation", "out_class_seg": 1, "batch_size": 16, "epoch": 30, "split_ratio": [0.6, 0.2, 0.2], "optimizer": "Adam", "lr": 0.0001, "augmentation": true, "dropout": 0.1},
+            {"backbone": "resnet50pp", "task": "segmentation", "out_class_seg": 1, "batch_size": 16, "epoch": 30, "split_ratio": [0.6, 0.2, 0.2], "optimizer": "Adam", "lr": 0.0001, "augmentation": true, "dropout": 0.2},
+            {"backbone": "resnet50pp", "task": "segmentation", "out_class_seg": 1, "batch_size": 16, "epoch": 30, "split_ratio": [0.6, 0.2, 0.2], "optimizer": "Adam", "lr": 0.0001, "augmentation": true, "dropout": 0.3},
+
+            {"backbone": "resnet50pp", "task": "segmentation", "out_class_seg": 1, "batch_size": 4, "epoch": 30, "split_ratio": [0.6, 0.2, 0.2], "optimizer": "Adam", "lr": 0.0001, "augmentation": true, "dropout": 0.1, "weights": "imagenet"},
+            {"backbone": "resnet50pp", "task": "segmentation", "out_class_seg": 1, "batch_size": 4, "epoch": 30, "split_ratio": [0.6, 0.2, 0.2], "optimizer": "Adam", "lr": 0.0001, "augmentation": true, "dropout": 0.2, "weights": "imagenet"},
+            {"backbone": "resnet50pp", "task": "segmentation", "out_class_seg": 1, "batch_size": 4, "epoch": 30, "split_ratio": [0.6, 0.2, 0.2], "optimizer": "Adam", "lr": 0.0001, "augmentation": true, "dropout": 0.3, "weights": "imagenet"},
+            {"backbone": "resnet50pp", "task": "segmentation", "out_class_seg": 1, "batch_size": 8, "epoch": 30, "split_ratio": [0.6, 0.2, 0.2], "optimizer": "Adam", "lr": 0.0001, "augmentation": true, "dropout": 0.1, "weights": "imagenet"},
+            {"backbone": "resnet50pp", "task": "segmentation", "out_class_seg": 1, "batch_size": 8, "epoch": 30, "split_ratio": [0.6, 0.2, 0.2], "optimizer": "Adam", "lr": 0.0001, "augmentation": true, "dropout": 0.2, "weights": "imagenet"},
+            {"backbone": "resnet50pp", "task": "segmentation", "out_class_seg": 1, "batch_size": 8, "epoch": 30, "split_ratio": [0.6, 0.2, 0.2], "optimizer": "Adam", "lr": 0.0001, "augmentation": true, "dropout": 0.3, "weights": "imagenet"},
+            {"backbone": "resnet50pp", "task": "segmentation", "out_class_seg": 1, "batch_size": 16, "epoch": 30, "split_ratio": [0.6, 0.2, 0.2], "optimizer": "Adam", "lr": 0.0001, "augmentation": true, "dropout": 0.1, "weights": "imagenet"},
+            {"backbone": "resnet50pp", "task": "segmentation", "out_class_seg": 1, "batch_size": 16, "epoch": 30, "split_ratio": [0.6, 0.2, 0.2], "optimizer": "Adam", "lr": 0.0001, "augmentation": true, "dropout": 0.2, "weights": "imagenet"},
+            {"backbone": "resnet50pp", "task": "segmentation", "out_class_seg": 1, "batch_size": 16, "epoch": 30, "split_ratio": [0.6, 0.2, 0.2], "optimizer": "Adam", "lr": 0.0001, "augmentation": true, "dropout": 0.3, "weights": "imagenet"}
+        ]
+    ]
+}
+
+
+
